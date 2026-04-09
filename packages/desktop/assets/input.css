@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@source "../src/**/*.rs";
+@source "../../ui/src/**/*.rs";
+
+body {
+    background-color: #0f1116;
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0px;
+}
