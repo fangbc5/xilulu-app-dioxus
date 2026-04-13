@@ -17,6 +17,7 @@ pub struct Toast {
     pub id: u64,
     pub message: String,
     pub variant: ToastVariant,
+    pub expires_at: u64,
 }
 
 #[derive(Clone, Copy)]
@@ -34,24 +35,19 @@ impl ToastManager {
     pub fn show(&self, message: impl Into<String>, variant: ToastVariant) {
         let msg = message.into();
         let id = TOAST_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+
         let toast = Toast {
             id,
             message: msg,
             variant,
+            expires_at: now + 3000,
         };
         let mut t = self.toasts;
         t.write().push(toast);
-
-        // Remove after 3 seconds
-        let mut toasts = self.toasts;
-        spawn(async move {
-            #[cfg(target_arch = "wasm32")]
-            gloo_timers::future::sleep(std::time::Duration::from_secs(3)).await;
-            #[cfg(not(target_arch = "wasm32"))]
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-
-            toasts.write().retain(|t| t.id != id);
-        });
     }
 
     pub fn success(&self, message: impl Into<String>) {
@@ -84,7 +80,26 @@ pub fn use_toast() -> ToastManager {
 #[component]
 pub fn ToastProvider(children: Element) -> Element {
     let manager = use_context_provider(|| ToastManager::new());
-    let toasts = manager.toasts;
+    let mut toasts = manager.toasts;
+
+    use_future(move || async move {
+        loop {
+            #[cfg(target_arch = "wasm32")]
+            gloo_timers::future::sleep(std::time::Duration::from_millis(500)).await;
+            #[cfg(not(target_arch = "wasm32"))]
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+
+            let has_expired = toasts.read().iter().any(|t| t.expires_at <= now);
+            if has_expired {
+                toasts.write().retain(|t| t.expires_at > now);
+            }
+        }
+    });
 
     rsx! {
         {children}

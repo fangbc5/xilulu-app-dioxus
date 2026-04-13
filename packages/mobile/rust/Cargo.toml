@@ -1,0 +1,12 @@
+[package]
+name = "mobile_rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+xilulu_core = { path = "../../core" }
+flutter_rust_bridge = "=2.3.0" # You might need to adjust this depending on codegen version
+tokio = { version = "1.28", features = ["rt", "macros", "sync"] }
