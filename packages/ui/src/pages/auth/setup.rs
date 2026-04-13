@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::router::Route;
+
 use dioxus_free_icons::Icon;
 use dioxus_free_icons::icons::ld_icons::{LdCamera, LdUser};
 use crate::i18n::use_language;
@@ -15,7 +15,7 @@ pub fn ProfileSetup() -> Element {
 
     let handle_finish = move |_| {
         let nav = use_navigator();
-        nav.push(Route::AppHome {});
+        nav.push("/app");
     };
 
     rsx! {

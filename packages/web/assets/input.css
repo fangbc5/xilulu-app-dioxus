@@ -4,8 +4,33 @@
 @source "../../ui/src/**/*.rs";
 
 body {
-    background-color: #0f1116;
-    color: #ffffff;
+    background-color: #ededed;
+    color: #333333;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0px;
 }
+
+#main, #dioxus {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000000;
+        color: #ffffff;
+    }
+}
+
+/* Hide bottom nav when keyboard is likely open (inputs are focused) */
+@media screen and (max-width: 768px) {
+    html:has(input:focus, textarea:focus) .mobile-bottom-nav {
+        display: none !important;
+    }
+}
+html, body, #main, #dioxus { width: 100%; height: 100%; }
+#dioxus { width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+html { width: 100%; height: 100%; }
+body, #main, #dioxus { overflow: hidden; }

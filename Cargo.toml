@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "packages/core",
     "packages/ui",
     "packages/web",
     "packages/desktop",
@@ -9,6 +10,7 @@ members = [
 
 [workspace.dependencies]
 dioxus = { version = "0.7.1" }
+xilulu_core = { path = "packages/core" }
 
 # workspace
 ui = { path = "packages/ui" }

@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 const MAIN_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
+    dioxus_logger::init(tracing::Level::DEBUG).expect("failed to init logger");
     dioxus::launch(App);
 }
 

@@ -3,9 +3,28 @@
 @source "../src/**/*.rs";
 @source "../../ui/src/**/*.rs";
 
+html, body, #main, #dioxus {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#dioxus {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 body {
-    background-color: #0f1116;
-    color: #ffffff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0px;
+    background-color: #ededed;
+    color: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000000;
+        color: #ffffff;
+    }
 }

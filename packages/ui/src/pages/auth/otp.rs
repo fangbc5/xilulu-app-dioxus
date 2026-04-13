@@ -1,8 +1,8 @@
-use dioxus::prelude::*;
-use crate::router::Route;
-use dioxus_free_icons::Icon;
-use dioxus_free_icons::icons::ld_icons::{LdChevronLeft, LdSmartphone, LdRefreshCw};
 use crate::i18n::use_language;
+use crate::router::Route;
+use dioxus::prelude::*;
+use dioxus_free_icons::icons::ld_icons::{LdChevronLeft, LdRefreshCw, LdSmartphone};
+use dioxus_free_icons::Icon;
 use rust_i18n::t;
 
 #[cfg(target_arch = "wasm32")]
@@ -18,7 +18,7 @@ async fn sleep_ms(ms: u64) {
 #[component]
 pub fn OtpInput(length: usize, value: Signal<String>) -> Element {
     let mut focus = use_signal(|| false);
-    
+
     rsx! {
         div { class: "relative w-full max-w-sm mx-auto",
             // The invisible real input
@@ -68,7 +68,7 @@ pub fn OtpInput(length: usize, value: Signal<String>) -> Element {
 pub fn OtpVerify(medium: String) -> Element {
     let code = use_signal(|| String::new());
     let code_len = 6;
-    
+
     let mut countdown = use_signal(|| 60);
 
     let lang = use_language();
@@ -85,21 +85,49 @@ pub fn OtpVerify(medium: String) -> Element {
         }
     });
 
+    let nav = use_navigator();
+    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+
+    let medium_for_verify = medium.clone();
+    let app_clone_1 = core_app.clone();
     let handle_verify = move |_| {
-        let nav = use_navigator();
-        // Mock verification: if code is 111111, go to AppHome (existing user)
-        // Otherwise assume new user and go to ProfileSetup
-        if code() == "111111" {
-            nav.push(Route::AppHome {});
-        } else {
-            nav.push(Route::ProfileSetup {});
-        }
+        let medium_clone = medium_for_verify.clone();
+        let code_val = code();
+        let auth_clone = app_clone_1.auth.clone();
+
+        spawn(async move {
+            let is_email = medium_clone.contains('@');
+            let mobile_opt = if !is_email { Some(medium_clone.as_str()) } else { None };
+            let email_opt = if is_email { Some(medium_clone.as_str()) } else { None };
+
+            match auth_clone.login_or_register(mobile_opt, email_opt, &code_val).await {
+                Ok(resp) => {
+                    if resp.is_new_user {
+                        nav.push(Route::ProfileSetup {});
+                    } else {
+                        nav.push("/app");
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("OTP Verify failed: {:?}", e);
+                    // Optional: Show error to user
+                }
+            }
+        });
     };
 
+    let app_clone_2 = core_app.clone();
+    let medium_for_resend = medium.clone();
     let handle_resend = move |_| {
         if countdown() == 0 {
             countdown.set(60);
-            // In real app, trigger resend API here
+            let medium_clone = medium_for_resend.clone();
+            let auth_clone = app_clone_2.auth.clone();
+            spawn(async move {
+                if let Err(e) = auth_clone.send_verify_code(&medium_clone).await {
+                    tracing::error!("Resend verify code failed: {:?}", e);
+                }
+            });
         }
     };
 
@@ -121,7 +149,9 @@ pub fn OtpVerify(medium: String) -> Element {
                             class: "text-white",
                         }
                     }
-                    h1 { class: "text-4xl font-bold text-white mb-4", {t!("auth.verify_title", locale = l_str).to_string()} }
+                    h1 { class: "text-4xl font-bold text-white mb-4",
+                        {t!("auth.verify_title", locale = l_str).to_string()}
+                    }
                     p { class: "text-lg text-zinc-400",
                         {t!("auth.verify_desc", locale = l_str).to_string()}
                     }
@@ -152,9 +182,12 @@ pub fn OtpVerify(medium: String) -> Element {
                 div { class: "flex-1 overflow-y-auto overscroll-contain flex flex-col px-6 sm:px-12 lg:px-24 pb-8",
                     div { class: "my-auto w-full max-w-[420px] mx-auto z-10",
                         div { class: "mb-8 text-center",
-                            h1 { class: "text-3xl font-bold tracking-tight mb-3", {t!("auth.enter_code", locale = l_str).to_string()} }
+                            h1 { class: "text-3xl font-bold tracking-tight mb-3",
+                                {t!("auth.enter_code", locale = l_str).to_string()}
+                            }
                             p { class: "text-zinc-500 dark:text-zinc-400 text-sm",
-                                {t!("auth.sent_code_to", locale = l_str).to_string()} " "
+                                {t!("auth.sent_code_to", locale = l_str).to_string()}
+                                " "
                                 span { class: "font-semibold text-zinc-900 dark:text-white",
                                     "{medium}"
                                 }
@@ -184,9 +217,9 @@ pub fn OtpVerify(medium: String) -> Element {
                                         height: 14,
                                     }
                                     if countdown() > 0 {
-                                        {t!("auth.resend_in", locale=l_str, s=countdown()).to_string()}
+                                        {t!("auth.resend_in", locale = l_str, s = countdown()).to_string()}
                                     } else {
-                                        {t!("auth.resend", locale=l_str).to_string()}
+                                        {t!("auth.resend", locale = l_str).to_string()}
                                     }
                                 }
                             }

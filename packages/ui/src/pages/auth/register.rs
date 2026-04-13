@@ -8,16 +8,17 @@ use rust_i18n::t;
 #[component]
 pub fn Register() -> Element {
     let mut username = use_signal(|| String::new());
-    let mut phone = use_signal(|| String::new());
     let mut password = use_signal(|| String::new());
+    let mut confirm_password = use_signal(|| String::new());
+    let mut captcha = use_signal(|| String::new());
 
     let lang = use_language();
     let l_str = lang().as_str();
 
     let handle_register = move |_| {
-        // Rediect to AppHome on success
+        // Rediect to ProfileSetup on success
         let navigator = use_navigator();
-        navigator.push(Route::AppHome {});
+        navigator.push(Route::ProfileSetup {});
     };
 
     rsx! {
@@ -109,25 +110,9 @@ pub fn Register() -> Element {
                                 input {
                                     r#type: "text",
                                     class: "flex-1 bg-transparent px-4 py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400",
-                                    placeholder: "{t!(\"auth.enter_username\", locale = l_str)}",
+                                    placeholder: "{t!(\"auth.enter_only_username\", locale = l_str)}",
                                     value: "{username}",
                                     oninput: move |e| username.set(e.value()),
-                                }
-                            }
-                            div { class: "relative flex items-center bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1 transition-all focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500 shadow-sm",
-                                div { class: "pl-4 text-zinc-400",
-                                    Icon {
-                                        icon: LdSmartphone,
-                                        width: 18,
-                                        height: 18,
-                                    }
-                                }
-                                input {
-                                    r#type: "tel",
-                                    class: "flex-1 bg-transparent px-4 py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400",
-                                    placeholder: "{t!(\"auth.enter_phone\", locale = l_str)}",
-                                    value: "{phone}",
-                                    oninput: move |e| phone.set(e.value()),
                                 }
                             }
                             div { class: "relative flex items-center bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1 transition-all focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500 shadow-sm",
@@ -140,6 +125,33 @@ pub fn Register() -> Element {
                                     placeholder: "{t!(\"auth.enter_password\", locale = l_str)}",
                                     value: "{password}",
                                     oninput: move |e| password.set(e.value()),
+                                }
+                            }
+                            div { class: "relative flex items-center bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1 transition-all focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500 shadow-sm",
+                                div { class: "pl-4 text-zinc-400",
+                                    Icon { icon: LdLock, width: 18, height: 18 }
+                                }
+                                input {
+                                    r#type: "password",
+                                    class: "flex-1 bg-transparent px-4 py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400",
+                                    placeholder: "{t!(\"auth.enter_confirm_password\", locale = l_str)}",
+                                    value: "{confirm_password}",
+                                    oninput: move |e| confirm_password.set(e.value()),
+                                }
+                            }
+                            div { class: "flex gap-2",
+                                div { class: "relative flex items-center bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-1 transition-all focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500 shadow-sm flex-1",
+                                    input {
+                                        r#type: "text",
+                                        class: "flex-1 bg-transparent px-4 py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400 text-sm",
+                                        placeholder: "{t!(\"auth.enter_captcha\", locale = l_str)}",
+                                        value: "{captcha}",
+                                        oninput: move |e| captcha.set(e.value()),
+                                    }
+                                }
+                                button { class: "w-28 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-xl font-bold tracking-widest text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0",
+                                    style: "font-family: monospace; background-image: url('data:image/svg+xml;utf8,<svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0l20 20M30 10l-15 40\" stroke=\"#888\" stroke-width=\"1\" fill=\"none\"/></svg>');",
+                                    "3F2A"
                                 }
                             }
                         }
