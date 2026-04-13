@@ -57,6 +57,9 @@ dependencies:
   extended_image: any #扩展图片
   platform: 3.1.0 #平台
 
+  flutter_rust_bridge: 2.12.0
+  rust_lib_wechat_flutter:
+    path: rust_builder
 dependency_overrides:
   js: 0.7.1
 #  path_provider: #鸿蒙专属

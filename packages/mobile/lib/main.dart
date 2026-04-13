@@ -7,10 +7,13 @@ import 'package:wechat_flutter/tools/data/data.dart';
 
 import 'config/storage_manager.dart';
 
+import 'src/rust/frb_generated.dart';
+
 void main() async {
   /// 确保初始化
   WidgetsFlutterBinding.ensureInitialized();
-
+  await RustLib.init();
+  
   /// 数据初始化
   await Data.initData();
 
