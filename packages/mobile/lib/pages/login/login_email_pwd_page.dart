@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 import '../../im/login_handle.dart';
+import '../../provider/login_model.dart';
 import '../../src/rust/api.dart' as rust_api;
 import '../../tools/wechat_flutter.dart';
 import '../root/root_page.dart';
@@ -12,8 +14,7 @@ class LoginEmailPwdPage extends StatefulWidget {
   @override
   _LoginEmailPwdPageState createState() => _LoginEmailPwdPageState();
 }
-import 'package:provider/provider.dart';
-import '../../models/model.dart';
+
 
 class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
   final TextEditingController _accountC = TextEditingController();

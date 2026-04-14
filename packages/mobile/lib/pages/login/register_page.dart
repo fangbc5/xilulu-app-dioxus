@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -284,11 +286,32 @@ class _RegisterPageState extends State<RegisterPage> {
           
           try {
             final areaCode = RegExp(r'\((.*?)\)').firstMatch(Provider.of<LoginModel>(context, listen: false).area)?.group(1) ?? '+86';
+            
+            String? avatarKey;
+            if (localAvatarImgPath.isNotEmpty) {
+              try {
+                final file = File(localAvatarImgPath);
+                final bytes = await file.readAsBytes();
+                final filename = localAvatarImgPath.split('/').last;
+                
+                final resJson = await rust_api.coreUploadFile(
+                   fileBytes: bytes,
+                   filename: filename,
+                   scene: 'avatar'
+                );
+                final meta = jsonDecode(resJson);
+                avatarKey = meta['file_key'];
+              } catch (ae) {
+                showToast('头像上传失败: $ae');
+                return;
+              }
+            }
+
             await rust_api.coreRegister(
                account: phoneC.text, 
                password: pWC.text, 
                nickname: nickC.text, 
-               avatar: localAvatarImgPath == '' ? null : localAvatarImgPath, 
+               avatar: avatarKey, 
                region: areaCode
             );
             showToast('注册成功, 请登录');
