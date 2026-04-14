@@ -14,19 +14,19 @@ void initApp() => RustLib.instance.api.crateApiInitApp();
 
 Future<String> pingCore() => RustLib.instance.api.crateApiPingCore();
 
-Future<String> coreLoginWithPwd({required String account, String? password}) =>
+Future<String> coreLoginWithPwd({required String account, String? password, String? region}) =>
     RustLib.instance.api
-        .crateApiCoreLoginWithPwd(account: account, password: password);
+        .crateApiCoreLoginWithPwd(account: account, password: password, region: region);
 
 Future<String> coreLoginOrRegisterByCode(
-        {required String mobile, required String code}) =>
+        {required String mobile, required String code, String? region}) =>
     RustLib.instance.api
-        .crateApiCoreLoginOrRegisterByCode(mobile: mobile, code: code);
+        .crateApiCoreLoginOrRegisterByCode(mobile: mobile, code: code, region: region);
 
 Future<void> coreRegister(
-        {required String mobile, String? password, String? nickname}) =>
+        {required String account, String? password, String? nickname, String? avatar, String? region}) =>
     RustLib.instance.api.crateApiCoreRegister(
-        mobile: mobile, password: password, nickname: nickname);
+        account: account, password: password, nickname: nickname, avatar: avatar, region: region);
 
 Future<void> coreSendVerifyCode({required String mobile}) =>
     RustLib.instance.api.crateApiCoreSendVerifyCode(mobile: mobile);

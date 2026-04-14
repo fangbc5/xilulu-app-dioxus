@@ -70,12 +70,13 @@ fn wire__crate__api__core_login_or_register_by_code_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_mobile = <String>::sse_decode(&mut deserializer);
             let api_code = <String>::sse_decode(&mut deserializer);
+            let api_region = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, String>(
                     (move || async move {
                         let output_ok =
-                            crate::api::core_login_or_register_by_code(api_mobile, api_code)
+                            crate::api::core_login_or_register_by_code(api_mobile, api_code, api_region)
                                 .await?;
                         Ok(output_ok)
                     })()
@@ -109,12 +110,14 @@ fn wire__crate__api__core_login_with_pwd_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <String>::sse_decode(&mut deserializer);
             let api_password = <Option<String>>::sse_decode(&mut deserializer);
+            let api_region = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, String>(
                     (move || async move {
                         let output_ok =
-                            crate::api::core_login_with_pwd(api_account, api_password).await?;
+                            crate::api::core_login_with_pwd(api_account, api_password, api_region)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -145,16 +148,23 @@ fn wire__crate__api__core_register_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_mobile = <String>::sse_decode(&mut deserializer);
+            let api_account = <String>::sse_decode(&mut deserializer);
             let api_password = <Option<String>>::sse_decode(&mut deserializer);
             let api_nickname = <Option<String>>::sse_decode(&mut deserializer);
+            let api_avatar = <Option<String>>::sse_decode(&mut deserializer);
+            let api_region = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, String>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::core_register(api_mobile, api_password, api_nickname)
-                                .await?;
+                        let output_ok = crate::api::core_register(
+                            api_account,
+                            api_password,
+                            api_nickname,
+                            api_avatar,
+                            api_region,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,

@@ -81,13 +81,13 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   Future<String> crateApiCoreLoginOrRegisterByCode(
-      {required String mobile, required String code});
+      {required String mobile, required String code, String? region});
 
   Future<String> crateApiCoreLoginWithPwd(
-      {required String account, String? password});
+      {required String account, String? password, String? region});
 
   Future<void> crateApiCoreRegister(
-      {required String mobile, String? password, String? nickname});
+      {required String account, String? password, String? nickname, String? avatar, String? region});
 
   Future<void> crateApiCoreSendVerifyCode({required String mobile});
 
@@ -106,13 +106,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<String> crateApiCoreLoginOrRegisterByCode(
-      {required String mobile, required String code}) {
+      {required String mobile, required String code, String? region}) {
     return handler.executeNormal(NormalTask(
       callFfi: (NativePortType port_) {
         final SseSerializer serializer =
             SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(mobile, serializer);
         sse_encode_String(code, serializer);
+        sse_encode_opt_String(region, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 1, port: port_);
       },
@@ -121,7 +122,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiCoreLoginOrRegisterByCodeConstMeta,
-      argValues: <dynamic>[mobile, code],
+      argValues: <dynamic>[mobile, code, region],
       apiImpl: this,
     ));
   }
@@ -129,18 +130,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiCoreLoginOrRegisterByCodeConstMeta =>
       const TaskConstMeta(
         debugName: 'core_login_or_register_by_code',
-        argNames: <String>['mobile', 'code'],
+        argNames: <String>['mobile', 'code', 'region'],
       );
 
   @override
   Future<String> crateApiCoreLoginWithPwd(
-      {required String account, String? password}) {
+      {required String account, String? password, String? region}) {
     return handler.executeNormal(NormalTask(
       callFfi: (NativePortType port_) {
         final SseSerializer serializer =
             SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(account, serializer);
         sse_encode_opt_String(password, serializer);
+        sse_encode_opt_String(region, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 2, port: port_);
       },
@@ -149,26 +151,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiCoreLoginWithPwdConstMeta,
-      argValues: <dynamic>[account, password],
+      argValues: <dynamic>[account, password, region],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiCoreLoginWithPwdConstMeta => const TaskConstMeta(
         debugName: 'core_login_with_pwd',
-        argNames: <String>['account', 'password'],
+        argNames: <String>['account', 'password', 'region'],
       );
 
   @override
   Future<void> crateApiCoreRegister(
-      {required String mobile, String? password, String? nickname}) {
+      {required String account, String? password, String? nickname, String? avatar, String? region}) {
     return handler.executeNormal(NormalTask(
       callFfi: (NativePortType port_) {
         final SseSerializer serializer =
             SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(mobile, serializer);
+        sse_encode_String(account, serializer);
         sse_encode_opt_String(password, serializer);
         sse_encode_opt_String(nickname, serializer);
+        sse_encode_opt_String(avatar, serializer);
+        sse_encode_opt_String(region, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 3, port: port_);
       },
@@ -177,14 +181,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiCoreRegisterConstMeta,
-      argValues: <dynamic>[mobile, password, nickname],
+      argValues: <dynamic>[account, password, nickname, avatar, region],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiCoreRegisterConstMeta => const TaskConstMeta(
         debugName: 'core_register',
-        argNames: <String>['mobile', 'password', 'nickname'],
+        argNames: <String>['account', 'password', 'nickname', 'avatar', 'region'],
       );
 
   @override

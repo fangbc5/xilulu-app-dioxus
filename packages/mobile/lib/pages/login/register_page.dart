@@ -284,7 +284,13 @@ class _RegisterPageState extends State<RegisterPage> {
           
           try {
             final areaCode = RegExp(r'\((.*?)\)').firstMatch(Provider.of<LoginModel>(context, listen: false).area)?.group(1) ?? '+86';
-            await rust_api.coreRegister(account: phoneC.text, password: pWC.text, nickname: nickC.text, region: areaCode);
+            await rust_api.coreRegister(
+               account: phoneC.text, 
+               password: pWC.text, 
+               nickname: nickC.text, 
+               avatar: localAvatarImgPath == '' ? null : localAvatarImgPath, 
+               region: areaCode
+            );
             showToast('注册成功, 请登录');
             Get.back();
           } catch (e) {
