@@ -8,11 +8,15 @@ import 'package:wechat_flutter/tools/data/data.dart';
 import 'config/storage_manager.dart';
 
 import 'src/rust/frb_generated.dart';
+import 'src/rust/api/im.dart';
 
 void main() async {
   /// 确保初始化
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
+  
+  // 初始化 Rust 核心 SDK 数据库 (目前使用内存库方便测试，正式环境后续接入本地存储)
+  await coreInitSdk(dbPath: 'sqlite::memory:');
   
   /// 数据初始化
   await Data.initData();

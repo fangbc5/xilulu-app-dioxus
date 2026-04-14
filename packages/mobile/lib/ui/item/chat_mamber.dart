@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart';
+
 import 'package:wechat_flutter/pages/contacts/contacts_details_page.dart';
 import 'package:wechat_flutter/pages/contacts/group_launch_page.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class ChatMamBer extends StatefulWidget {
   final V2TimUserFullInfo? model;

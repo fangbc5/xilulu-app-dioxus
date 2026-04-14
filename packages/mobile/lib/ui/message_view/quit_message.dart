@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_tips_elem.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
+
 import 'package:wechat_flutter/provider/global_model.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class QuitMessage extends StatelessWidget {
   const QuitMessage(this.msg, {super.key});

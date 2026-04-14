@@ -4,3 +4,4 @@ pub mod rtc;
 pub mod model;
 pub mod service;
 pub mod port;
+pub mod db;

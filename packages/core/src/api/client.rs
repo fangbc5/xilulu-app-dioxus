@@ -60,7 +60,10 @@ impl ApiClient {
         if let Ok(Some(tok)) = self.storage.get("access_token").await {
             let end = if tok.len() > 10 { &tok[tok.len() - 10..] } else { &tok };
             tracing::info!(">>> AUTH INJECTED: token ends with: ...{}", end);
+            println!(">>> AUTH INJECTED: token ends with: ...{}", end);
             req = req.bearer_auth(tok);
+        } else {
+            println!(">>> AUTH INJECTION FAILED: NO ACCESS TOKEN IN STORAGE");
         }
         req
     }

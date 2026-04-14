@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
 
 import '../../im/login_handle.dart';
-import '../../src/rust/api.dart' as rust_api;
+import '../../src/rust/api/auth.dart' as rust_api;
 import '../../tools/wechat_flutter.dart';
 import '../root/root_page.dart';
 import '../../ui/view/main_input.dart';
@@ -37,9 +38,15 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
         resp = await rust_api.coreLoginOrRegisterByCode(mobile: widget.mobile, code: _tC.text, region: widget.areaCode);
       }
       
-      // Parse token if needed to save locally, but rust level already saves it.
-      // We can trigger ImLogin to support chat list initialization
-      // Note: for IM login we might just use mobile number as userID
+      // 解析出来的 JSON
+      final Map<String, dynamic> data = json.decode(resp);
+      if (data.containsKey('access_token')) {
+        await SharedUtil.instance.saveString('access_token', data['access_token']);
+      }
+      if (data.containsKey('refresh_token')) {
+        await SharedUtil.instance.saveString('refresh_token', data['refresh_token']);
+      }
+      
       await ImLoginManager.login(widget.mobile, context);
       
       // Get.offAll(RootPage()) happens inside ImLoginManager.login, 

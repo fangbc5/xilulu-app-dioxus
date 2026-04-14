@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:provider/provider.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_image.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_image_elem.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
+
+
 
 import '../../provider/global_model.dart';
 import '../../tools/wechat_flutter.dart';
 import 'msg_avatar.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class ImgMsg extends StatelessWidget {
   const ImgMsg(this.model, {super.key});

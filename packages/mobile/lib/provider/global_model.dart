@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart';
+
 import 'package:wechat_flutter/im/info_handle.dart';
 import 'package:wechat_flutter/provider/loginc/global_loginc.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class GlobalModel extends ChangeNotifier {
   BuildContext? context;

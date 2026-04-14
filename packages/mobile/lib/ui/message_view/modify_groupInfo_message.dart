@@ -1,6 +1,7 @@
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 import 'package:flutter/material.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_tips_elem.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
+
 
 class ModifyGroupInfoMessage extends StatefulWidget {
   const ModifyGroupInfoMessage(this.msg, {super.key});

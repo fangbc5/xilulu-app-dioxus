@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/enum/conversation_type.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info.dart';
+
+
 import 'package:wechat_flutter/im/fun_dim_group_model.dart';
 import 'package:wechat_flutter/pages/chat/chat_page.dart';
 import 'package:wechat_flutter/pages/contacts/group_launch_page.dart';
 import 'package:wechat_flutter/pages/home/search_page.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class GroupListPage extends StatefulWidget {
   @override

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
 import '../../im/login_handle.dart';
-import '../../src/rust/api.dart' as rust_api;
+import '../../src/rust/api/auth.dart' as rust_api;
 import '../../tools/wechat_flutter.dart';
 import '../root/root_page.dart';
 import '../../ui/view/main_input.dart';
@@ -26,11 +27,25 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
     }
     
     try {
-      await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: null);
+      showToast('正在向 Rust FFI 网关请求...');
+      final respJson = await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: null);
+      
+      // 解析 FFI 返回的附带用户身份信息的 JSON
+      final Map<String, dynamic> data = json.decode(respJson);
+      
+      await SharedUtil.instance.saveString(Keys.account, _accountC.text);
+      if (data.containsKey('access_token')) {
+        await SharedUtil.instance.saveString('access_token', data['access_token']);
+      }
+      if (data.containsKey('refresh_token')) {
+        await SharedUtil.instance.saveString('refresh_token', data['refresh_token']);
+      }
+      
       await ImLoginManager.login(_accountC.text, context);
-      showToast('登录成功');
+      showToast('登录成功，Token 已自动挂载');
       Get.offAll(const RootPage());
     } catch (e) {
+      debugPrint('Login FFI Error: $e');
       showToast('登录失败: \n$e');
     }
   }

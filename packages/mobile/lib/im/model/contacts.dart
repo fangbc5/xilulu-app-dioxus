@@ -1,9 +1,10 @@
 import 'package:lpinyin/lpinyin.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_friend_info.dart';
+
 import 'package:wechat_flutter/im/friend_handle.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 import '../info_handle.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class Contact {
   Contact({

@@ -8,7 +8,7 @@ import 'package:wechat_flutter/pages/wallet/pay_home_page.dart';
 import 'package:wechat_flutter/provider/global_model.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/view/list_tile_view.dart';
-import '../../src/rust/api.dart' as rust_api;
+import '../../src/rust/api/auth.dart' as rust_api;
 
 class MinePage extends StatefulWidget {
   @override

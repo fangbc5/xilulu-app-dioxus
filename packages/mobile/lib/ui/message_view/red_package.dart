@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
 import 'package:wechat_flutter/pages/red_package/red_receive_dialog.dart';
 import 'package:wechat_flutter/provider/global_model.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 import 'msg_avatar.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class RedPackage extends StatelessWidget {
   const RedPackage(this.model, {super.key});

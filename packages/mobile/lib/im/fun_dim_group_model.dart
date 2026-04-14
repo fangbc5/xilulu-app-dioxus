@@ -1,11 +1,12 @@
-import 'package:tencent_cloud_chat_sdk/enum/group_member_filter_enum.dart';
-import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_member_full_info.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_member_info_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
+
+
+
+
+
+
+
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 // Dim dim = new Dim();
 

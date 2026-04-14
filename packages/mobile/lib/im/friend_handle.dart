@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:tencent_cloud_chat_sdk/enum/friend_type_enum.dart';
-import 'package:tencent_cloud_chat_sdk/enum/group_member_role_enum.dart';
-import 'package:tencent_cloud_chat_sdk/enum/group_type.dart';
-import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_friend_info.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_friend_operation_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_member.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
+
+
+
+
+
+
+
+
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 typedef OnSuCc = void Function(bool v);
 

@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:tencent_cloud_chat_sdk/enum/conversation_type.dart';
+
 import 'package:wechat_flutter/pages/chat/chat_page.dart';
 import 'package:wechat_flutter/pages/chat/more_info_page.dart';
 import 'package:wechat_flutter/pages/chat/set_remark_page.dart';
@@ -14,6 +14,7 @@ import 'package:wechat_flutter/ui/dialog/friend_item_dialog.dart';
 import 'package:wechat_flutter/ui/item/contact_card.dart';
 import 'package:wechat_flutter/ui/orther/button_row.dart';
 import 'package:wechat_flutter/ui/orther/label_row.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class ContactsDetailsPage extends StatefulWidget {
   final String? avatar, title, id;

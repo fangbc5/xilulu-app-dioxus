@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message_online_url.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_video_elem.dart';
+
+
+
+
+
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 import '../../provider/global_model.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class VideoMessage extends StatefulWidget {
   final V2TimMessage msg;

@@ -4,12 +4,13 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_sound_elem.dart';
+
+
 
 import '../../provider/global_model.dart';
 import '../../tools/wechat_flutter.dart';
 import 'msg_avatar.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class SoundMsg extends StatefulWidget {
   final V2TimMessage model;

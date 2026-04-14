@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:tencent_cloud_chat_sdk/enum/group_tips_elem_type.dart';
-import 'package:tencent_cloud_chat_sdk/enum/message_elem_type.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_custom_elem.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_tips_elem.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
+
+
+
+
 import 'package:wechat_flutter/ui/message_view/Img_msg.dart';
 import 'package:wechat_flutter/ui/message_view/join_message.dart';
 import 'package:wechat_flutter/ui/message_view/modify_groupInfo_message.dart';
@@ -15,6 +15,7 @@ import 'package:wechat_flutter/ui/message_view/sound_msg.dart';
 import 'package:wechat_flutter/ui/message_view/text_msg.dart';
 
 import '../message_view/video_message.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class SendMessageView extends StatefulWidget {
   const SendMessageView(this.model, {super.key});

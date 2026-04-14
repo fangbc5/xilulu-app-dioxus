@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/enum/conversation_type.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart';
+
+
 import 'package:wechat_flutter/im/conversation_handle.dart';
 import 'package:wechat_flutter/im/model/chat_list.dart';
 import 'package:wechat_flutter/pages/chat/chat_page.dart';
@@ -12,6 +12,7 @@ import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 import 'package:wechat_flutter/ui/view/pop_view.dart';
 
 import '../../tools/event/im_event.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -139,7 +140,7 @@ class _HomePageState extends State<HomePage>
               onTap: () {
                 Get.to<void>(ChatPage(
                     id: model.userID ?? model.groupID!,
-                    title: model.showName ?? model.conversationID,
+                    title: model.showName ?? model.conversationID!,
                     type: model.type!));
               },
               onTapDown: (TapDownDetails details) {
@@ -150,7 +151,7 @@ class _HomePageState extends State<HomePage>
                   context,
                   tapPos!,
                   model.type == ConversationType.V2TIM_GROUP ? 2 : 1,
-                  model.conversationID,
+                  model.conversationID!,
                 );
               },
               child: MyConversationView(

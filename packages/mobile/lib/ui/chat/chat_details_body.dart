@@ -1,8 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
 import 'package:wechat_flutter/ui/massage/wait1.dart';
 import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class ChatDetailsBody extends StatelessWidget {
   final ScrollController sC;

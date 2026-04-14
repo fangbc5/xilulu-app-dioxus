@@ -2,12 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
 
 import '../../pages/contacts/contacts_details_page.dart';
 import '../../provider/global_model.dart';
 import '../../tools/wechat_flutter.dart';
 import '../view/shake_view.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 ///封装之后的拍一拍效果[ShakeView]
 class MsgAvatar extends StatefulWidget {

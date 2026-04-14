@@ -1,9 +1,10 @@
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
-import 'package:tencent_cloud_chat_sdk/tencent_im_sdk_plugin.dart';
+
+
+
+
 import 'package:wechat_flutter/im/conversation_handle.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class ChatListData {
   Future<bool> isNull() async {

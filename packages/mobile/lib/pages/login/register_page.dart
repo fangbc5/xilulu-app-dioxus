@@ -7,7 +7,8 @@ import 'package:provider/provider.dart';
 
 import 'package:flutter/gestures.dart';
 import '../../provider/login_model.dart';
-import '../../src/rust/api.dart' as rust_api;
+import '../../src/rust/api/auth.dart' as rust_api;
+import '../../src/rust/api/oss.dart' as oss_api;
 import '../../tools/wechat_flutter.dart';
 import '../../ui/web/web_view.dart';
 import 'select_location_page.dart';
@@ -294,7 +295,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 final bytes = await file.readAsBytes();
                 final filename = localAvatarImgPath.split('/').last;
                 
-                final resJson = await rust_api.coreUploadFile(
+                final resJson = await oss_api.coreUploadFile(
                    fileBytes: bytes,
                    filename: filename,
                    scene: 'avatar'

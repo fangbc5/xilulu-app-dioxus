@@ -1,15 +1,16 @@
 import 'dart:developer';
 
 import 'package:image_picker/image_picker.dart';
-import 'package:tencent_cloud_chat_sdk/enum/conversation_type.dart';
-import 'package:tencent_cloud_chat_sdk/enum/history_msg_get_type_enum.dart';
-import 'package:tencent_cloud_chat_sdk/enum/offlinePushInfo.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message_list_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_msg_create_info_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
-import 'package:tencent_cloud_chat_sdk/tencent_im_sdk_plugin.dart';
+
+
+
+
+
+
+
+
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 Future<List<V2TimMessage>> getDimMessages(String id,
     {required int type, Callback? callback, int num = 50}) async {

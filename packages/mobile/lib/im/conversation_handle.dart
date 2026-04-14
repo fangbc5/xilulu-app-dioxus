@@ -1,10 +1,11 @@
-import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_callback.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation_filter.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
+
+
+
+
+
+
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 Future<List<V2TimConversation?>?> getConversationsListData() async {
   final V2TimValueCallback<V2TimConversationResult> result =

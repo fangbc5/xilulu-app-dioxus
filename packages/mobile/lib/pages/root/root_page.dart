@@ -2,8 +2,8 @@ import 'dart:developer';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_value_callback.dart';
+
+
 import 'package:wechat_flutter/http/api.dart';
 import 'package:wechat_flutter/pages/contacts/contacts_page.dart';
 import 'package:wechat_flutter/pages/discover/discover_page.dart';
@@ -11,6 +11,8 @@ import 'package:wechat_flutter/pages/home/home_page.dart';
 import 'package:wechat_flutter/pages/mine/mine_page.dart';
 import 'package:wechat_flutter/pages/root/root_tabbar.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/login_handle.dart';
 
 class RootPage extends StatefulWidget {
   const RootPage({super.key});
@@ -25,6 +27,9 @@ class _RootPageState extends State<RootPage> {
     super.initState();
     ifBrokenNetwork();
     updateApi(context);
+    
+    // 如果直接进入主页(有本地登录态)，必须自动重连 WS 并同步 Token 到 Rust 内存
+    ImLoginManager.login("auto", context);
   }
 
   Future<void> ifBrokenNetwork() async {

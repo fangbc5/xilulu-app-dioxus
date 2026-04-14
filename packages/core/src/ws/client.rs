@@ -116,7 +116,11 @@ impl WsClient {
             // Spawn Heartbeat ping
             let (hb_tx, mut hb_rx) = tokio::sync::mpsc::channel(1);
             tokio::spawn(async move {
-                let mut ticker = tokio::time::interval(HEARTBEAT_INTERVAL);
+                // Delay the first tick to avoid sending data before gateway fully proxies stream
+                let mut ticker = tokio::time::interval_at(
+                    tokio::time::Instant::now() + HEARTBEAT_INTERVAL,
+                    HEARTBEAT_INTERVAL,
+                );
                 loop {
                     tokio::select! {
                         _ = ticker.tick() => {

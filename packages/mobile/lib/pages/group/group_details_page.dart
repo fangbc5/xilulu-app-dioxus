@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info_result.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_member_full_info.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart';
+
+
+
+
 import 'package:wechat_flutter/im/fun_dim_group_model.dart';
 import 'package:wechat_flutter/im/group/fun_dim_info.dart';
 import 'package:wechat_flutter/pages/group/group_billboard_page.dart';
@@ -20,6 +20,7 @@ import 'package:wechat_flutter/ui/dialog/confirm_alert.dart';
 import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 
 import '../../im/info_handle.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class GroupDetailsPage extends StatefulWidget {
   final String peer;

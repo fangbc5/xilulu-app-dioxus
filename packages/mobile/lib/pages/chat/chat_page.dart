@@ -1,7 +1,7 @@
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart';
+
 import 'package:wechat_flutter/im/model/chat_data.dart';
 import 'package:wechat_flutter/im/send_handle.dart';
 import 'package:wechat_flutter/pages/chat/chat_more_page.dart';
@@ -16,6 +16,7 @@ import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 
 import '../../tools/event/im_event.dart';
 import 'chat_info_page.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 enum ButtonType { voice, more }
 

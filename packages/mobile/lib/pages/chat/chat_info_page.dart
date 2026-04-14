@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart';
+
 import 'package:wechat_flutter/im/info_handle.dart';
 import 'package:wechat_flutter/pages/home/search_page.dart';
 import 'package:wechat_flutter/pages/settings/chat_background_page.dart';
@@ -9,6 +9,7 @@ import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/dialog/confirm_alert.dart';
 import 'package:wechat_flutter/ui/item/chat_mamber.dart';
 import 'package:wechat_flutter/ui/orther/label_row.dart';
+import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class ChatInfoPage extends StatefulWidget {
   final String id;

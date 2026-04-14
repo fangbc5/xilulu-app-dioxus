@@ -95,7 +95,14 @@ class SharedUtil {
 
   Future<bool> getBoolean(String key) async {
     String account = StorageManager.sp.getString(Keys.account) ?? "default";
-    return StorageManager.sp.getBool(key + account) ?? false;
+    try {
+      return StorageManager.sp.getBool(key + account) ?? false;
+    } catch (e) {
+      print('getBoolean error for key $key: $e');
+      // If a String was accidentally saved, clean it up and return false
+      await StorageManager.sp.remove(key + account);
+      return false;
+    }
   }
 
   Future<List<String>?> getStringList(String key) async {
