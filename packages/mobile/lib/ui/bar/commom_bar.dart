@@ -11,6 +11,7 @@ class ComMomBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor = appBarColor,
     this.mainColor = Colors.black,
     this.titleW,
+    this.centerTitle = false,
     this.bottom,
     this.leadingImg = '',
     this.leadingW,
@@ -22,6 +23,7 @@ class ComMomBar extends StatelessWidget implements PreferredSizeWidget {
   final Color backgroundColor;
   final Color mainColor;
   final Widget? titleW;
+  final bool centerTitle;
   final Widget? leadingW;
   final PreferredSizeWidget? bottom;
   final String leadingImg;
@@ -92,7 +94,7 @@ class ComMomBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0.0,
       // brightness: Brightness.light,
       leading: leadingW ?? leading(context),
-      centerTitle: false,
+      centerTitle: centerTitle,
       bottom: bottom,
       actions: rightDMActions ?? [Center()],
     );

@@ -74,11 +74,19 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   }
 
   Widget body(GlobalModel model) {
-    List<Map<String, String>> data = [
-      {'label': '微信号', 'value': model.account},
-      {'label': '二维码名片', 'value': ''},
-      {'label': '更多', 'value': ''},
+    List<Map<String, dynamic>> data = [
+      {'label': '名字', 'value': model.nickName ?? model.account},
+      {'label': '性别', 'value': '男'},
+      {'label': '地区', 'value': '北京 昌平'},
+      {'label': '手机号', 'value': '138******34'},
+      {'label': '微信号', 'value': 'admin'},
+      {'label': '我的二维码', 'value': ''},
+      {'label': '拍一拍', 'value': ''},
+      {'label': '签名', 'value': '幸福归来。我走了那么远的路，百转千回，只为与你相逢。', 'isLine': false, 'gap': true},
+      {'label': '来电铃声', 'value': '就是爱你', 'isLine': false, 'gap': true},
       {'label': '我的地址', 'value': ''},
+      {'label': '我的发票抬头', 'value': '', 'isLine': false, 'gap': true},
+      {'label': '微信豆', 'value': '', 'isLine': false},
     ];
 
     var content = [
@@ -87,23 +95,16 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
         isLine: true,
         isRight: true,
         rightW: new SizedBox(
-          width: 55.0,
-          height: 55.0,
+          width: 28.0,
+          height: 28.0,
           child: new ClipRRect(
-            borderRadius: BorderRadius.all(Radius.circular(5.0)),
+            borderRadius: BorderRadius.all(Radius.circular(4.0)),
             child: strNoEmpty(model.avatar)
                 ? dynamicAvatar(model.avatar)
                 : new Image.asset(defIcon, fit: BoxFit.cover),
           ),
         ),
         onPressed: () => _openGallery(),
-      ),
-      new LabelRow(
-        label: '昵称',
-        isLine: true,
-        isRight: true,
-        rValue: model.nickName,
-        onPressed: () => Get.to<void>(new ChangeNamePage(model.nickName)),
       ),
       new Column(
         children: data.map((item) => buildContent(item, model)).toList(),
@@ -113,18 +114,32 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     return new Column(children: content);
   }
 
-  Widget buildContent(Map<String, String> item, GlobalModel model) {
+  Widget buildContent(Map<String, dynamic> item, GlobalModel model) {
+    bool isGap = item['gap'] == true;
+    bool isLine = item['isLine'] ?? true;
+    String label = item['label'];
+
     return new LabelRow(
-      label: item['label'],
+      label: label,
       rValue: item['value'],
-      isLine: item['label'] == '我的地址' || item['label'] == '更多' ? false : true,
-      isRight: item['label'] == '微信号' ? false : true,
-      margin: EdgeInsets.only(bottom: item['label'] == '更多' ? 10.0 : 0.0),
-      rightW: item['label'] == '二维码名片'
-          ? new Image.asset('assets/images/mine/ic_small_code.png',
-              color: mainTextColor.withOpacity(0.7))
-          : new Container(),
-      onPressed: () => action(item['label']),
+      isLine: isLine,
+      isRight: true,
+      isTopAlign: label == '签名', // Ensure long multiline text aligns its Top label with the text block
+      margin: EdgeInsets.only(bottom: isGap ? 8.0 : 0.0), // Standard grouping gap
+      rightW: label == '我的二维码'
+          ? new Container(
+              margin: EdgeInsets.only(right: 4.0),
+              child: new Image.asset('assets/images/mine/ic_small_code.png',
+                  color: Color(0xFFC7C7CC), width: 14.0),
+            )
+          : null,
+      onPressed: () {
+        if (label == '名字') {
+          Get.to<void>(new ChangeNamePage(model.nickName));
+        } else {
+          action(label);
+        }
+      },
     );
   }
 
@@ -134,7 +149,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
     return new Scaffold(
       backgroundColor: appBarColor,
-      appBar: new ComMomBar(title: '个人信息'),
+      appBar: new ComMomBar(title: '个人资料', centerTitle: true),
       body: new SingleChildScrollView(child: body(model)),
     );
   }

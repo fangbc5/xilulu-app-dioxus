@@ -26,10 +26,13 @@ class LabelRow extends StatelessWidget {
     this.rightW,
     this.rValue,
     this.margin,
-    this.padding = const EdgeInsets.only(top: 15.0, bottom: 15.0, right: 5.0),
+    this.padding = const EdgeInsets.only(top: 14.0, bottom: 14.0, right: 15.0),
     this.headW,
     this.lineWidth = mainLineWidth,
+    this.isTopAlign = false,
   });
+
+  final bool isTopAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +42,7 @@ class LabelRow extends StatelessWidget {
         style: TextButton.styleFrom(
           backgroundColor: Colors.white,
           padding: EdgeInsets.all(0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         ),
         onPressed: onPressed ?? () {},
         child: Container(
@@ -46,40 +50,60 @@ class LabelRow extends StatelessWidget {
           margin: EdgeInsets.only(left: 20.0),
           decoration: BoxDecoration(
             border: isLine
-                ? Border(bottom: BorderSide(color: lineColor, width: lineWidth))
+                ? Border(bottom: BorderSide(color: Color(0xFFEFEFEF), width: 0.5)) // Faint standard iOS gray line
                 : null,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               if (headW != null) headW!,
-              SizedBox(
-                width: labelWidth,
-                child: Text(
-                  label ?? '',
-                  style: TextStyle(fontSize: 17.0),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: isTopAlign ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: labelWidth,
+                      child: Text(
+                        label ?? '',
+                        style: TextStyle(color: Color(0xFF333333), fontSize: 16.0, fontWeight: FontWeight.w400),
+                      ),
+                    ),
+                    if (value != null)
+                      Text(
+                        value!,
+                        style: TextStyle(
+                          color: mainTextColor.withOpacity(0.7),
+                        ),
+                      ),
+                    Spacer(),
+                    if (rValue != null)
+                      Expanded(
+                        child: Text(
+                          rValue!,
+                          textAlign: TextAlign.right,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Color(0xFF888888),
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16.0,
+                            height: 1.3, // add line height for the multiline text so it matches original better
+                          ),
+                        ),
+                      ),
+                    if (rightW != null) Container(margin: EdgeInsets.only(left: 10.0), child: rightW!),
+                  ],
                 ),
               ),
-              if (value != null)
-                Text(
-                  value!,
-                  style: TextStyle(
-                    color: mainTextColor.withOpacity(0.7),
-                  ),
-                ),
-              Spacer(),
-              if (rValue != null)
-                Text(
-                  rValue!,
-                  style: TextStyle(
-                    color: mainTextColor.withOpacity(0.7),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              if (rightW != null) rightW!,
               if (isRight)
-                Icon(
-                  CupertinoIcons.right_chevron,
-                  color: mainTextColor.withOpacity(0.5),
+                Container(
+                  width: 8.0,
+                  margin: EdgeInsets.only(left: 10.0),
+                  child: Image.asset(
+                    'assets/images/ic_right_arrow_grey.webp',
+                    color: Color(0xFFC7C7CC),
+                    fit: BoxFit.cover,
+                  ),
                 )
               else
                 Container(width: 10.0),

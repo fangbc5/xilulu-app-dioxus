@@ -166,7 +166,7 @@ class _MinePageState extends State<MinePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 topRow,
-                SizedBox(height: 12.0),
+                SizedBox(height: 3.0),
                 statusRow,
               ],
             ),
