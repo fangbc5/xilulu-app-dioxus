@@ -107,11 +107,12 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
                 ),
                 const SizedBox(height: 20),
                 Container(
+                  height: 56.0,
                   margin: const EdgeInsets.symmetric(horizontal: 25.0),
-                  padding: const EdgeInsets.only(top: 15.0, bottom: 15.0),
                   decoration: BoxDecoration(
                       border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       SizedBox(
                         width: Get.width * 0.25,
@@ -132,11 +133,12 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
                   ),
                 ),
                 Container(
+                  height: 56.0,
                   margin: const EdgeInsets.symmetric(horizontal: 25.0),
-                  padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
                   decoration: BoxDecoration(
                       border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       SizedBox(
                         width: Get.width * 0.25,
@@ -151,6 +153,8 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
                           obscureText: isPasswordMode,
                           style: const TextStyle(textBaseline: TextBaseline.alphabetic),
                           decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
                               hintText: isPasswordMode ? '请填写密码' : '收到的验证码',
                               hintStyle: TextStyle(color: Colors.grey.withOpacity(0.8)),
                               border: InputBorder.none),

@@ -72,11 +72,12 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       const SizedBox(height: 30),
       Container(
+        height: 56.0,
         margin: const EdgeInsets.symmetric(horizontal: 25.0),
-        padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             SizedBox(
               width: Get.width * 0.25,
@@ -90,6 +91,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 controller: nickC,
                 style: const TextStyle(fontSize: 16.0),
                 decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                     hintText: '请填写昵称',
                     hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
@@ -100,11 +103,12 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       Container(
+        height: 56.0,
         margin: const EdgeInsets.symmetric(horizontal: 25.0),
-        padding: const EdgeInsets.only(top: 15.0, bottom: 15.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             SizedBox(
               width: Get.width * 0.25,
@@ -136,11 +140,12 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       Container(
+        height: 56.0,
         margin: const EdgeInsets.symmetric(horizontal: 25.0),
-        padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             SizedBox(
               width: Get.width * 0.25,
@@ -156,6 +161,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 keyboardType: TextInputType.phone,
                 style: const TextStyle(fontSize: 16.0),
                 decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                     hintText: '请填写手机号',
                     hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
@@ -166,11 +173,12 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       Container(
+        height: 56.0,
         margin: const EdgeInsets.symmetric(horizontal: 25.0),
-        padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             SizedBox(
               width: Get.width * 0.25,
@@ -185,6 +193,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 obscureText: !isPwdVisible,
                 style: const TextStyle(textBaseline: TextBaseline.alphabetic, fontSize: 16.0),
                 decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                     hintText: '请设置密码',
                     hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
@@ -201,7 +211,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ],
         ),
       ),
-      const SizedBox(height: mainSpace * 3),
+      const SizedBox(height: 60.0),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
