@@ -109,7 +109,10 @@ class _LoginPageState extends State<LoginPage> {
                   style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
                 ),
               ),
-              const Text('+86 ', style: TextStyle(fontSize: 16.0, color: Colors.grey)),
+              Text(
+                '${RegExp(r'\((.*?)\)').firstMatch(model.area)?.group(1) ?? '+86'} ',
+                style: const TextStyle(fontSize: 16.0, color: Colors.grey),
+              ),
               Expanded(
                   child: TextField(
                 controller: _tC,
@@ -215,7 +218,8 @@ class _LoginPageState extends State<LoginPage> {
                         if (_tC.text == '') {
                           showToast( '请输入手机号');
                         } else if (_tC.text.length >= 3) {
-                          Get.to(() => LoginVerifyPage(mobile: _tC.text));
+                          final areaCode = RegExp(r'\((.*?)\)').firstMatch(model.area)?.group(1) ?? '+86';
+                          Get.to(() => LoginVerifyPage(mobile: _tC.text, areaCode: areaCode));
                         } else {
                           showToast( '请输入正确的手机号');
                         }

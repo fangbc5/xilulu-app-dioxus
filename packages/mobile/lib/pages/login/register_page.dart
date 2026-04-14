@@ -154,7 +154,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
               ),
             ),
-            const Text('+86 ', style: TextStyle(fontSize: 16.0, color: Colors.grey)),
+            Text(
+              '${RegExp(r'\((.*?)\)').firstMatch(model.area)?.group(1) ?? '+86'} ',
+              style: const TextStyle(fontSize: 16.0, color: Colors.grey),
+            ),
             Expanded(
               child: TextField(
                 controller: phoneC,

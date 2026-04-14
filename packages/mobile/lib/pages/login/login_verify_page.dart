@@ -9,8 +9,9 @@ import '../../ui/view/main_input.dart';
 
 class LoginVerifyPage extends StatefulWidget {
   
-  const LoginVerifyPage({super.key, required this.mobile});
+  const LoginVerifyPage({super.key, required this.mobile, this.areaCode = '+86'});
   final String mobile;
+  final String areaCode;
 
   @override
   _LoginVerifyPageState createState() => _LoginVerifyPageState();
@@ -121,7 +122,7 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
                           style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
                         ),
                       ),
-                      const Text('+86 ', style: TextStyle(fontSize: 16.0, color: Colors.grey)),
+                      Text('${widget.areaCode} ', style: const TextStyle(fontSize: 16.0, color: Colors.grey)),
                       Padding(
                         padding: const EdgeInsets.only(left: 10.0),
                         child: Text(
