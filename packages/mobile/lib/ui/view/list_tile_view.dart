@@ -82,6 +82,7 @@ class ListTileView extends StatelessWidget {
         style: TextButton.styleFrom(
           backgroundColor: Colors.white,
           padding: EdgeInsets.all(0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         ),
         onPressed: onPressed ?? () {},
         child: row,

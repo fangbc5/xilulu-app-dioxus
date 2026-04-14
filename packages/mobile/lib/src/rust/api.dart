@@ -14,19 +14,37 @@ void initApp() => RustLib.instance.api.crateApiInitApp();
 
 Future<String> pingCore() => RustLib.instance.api.crateApiPingCore();
 
-Future<String> coreLoginWithPwd({required String account, String? password, String? region}) =>
-    RustLib.instance.api
-        .crateApiCoreLoginWithPwd(account: account, password: password, region: region);
+Future<String> coreLoginWithPwd(
+        {required String account, String? password, String? region}) =>
+    RustLib.instance.api.crateApiCoreLoginWithPwd(
+        account: account, password: password, region: region);
 
 Future<String> coreLoginOrRegisterByCode(
         {required String mobile, required String code, String? region}) =>
-    RustLib.instance.api
-        .crateApiCoreLoginOrRegisterByCode(mobile: mobile, code: code, region: region);
+    RustLib.instance.api.crateApiCoreLoginOrRegisterByCode(
+        mobile: mobile, code: code, region: region);
 
 Future<void> coreRegister(
-        {required String account, String? password, String? nickname, String? avatar, String? region}) =>
+        {required String account,
+        String? password,
+        String? nickname,
+        String? avatar,
+        String? region}) =>
     RustLib.instance.api.crateApiCoreRegister(
-        account: account, password: password, nickname: nickname, avatar: avatar, region: region);
+        account: account,
+        password: password,
+        nickname: nickname,
+        avatar: avatar,
+        region: region);
 
 Future<void> coreSendVerifyCode({required String mobile}) =>
     RustLib.instance.api.crateApiCoreSendVerifyCode(mobile: mobile);
+
+Future<void> coreLogout() => RustLib.instance.api.crateApiCoreLogout();
+
+Future<String> coreUploadFile(
+        {required List<int> fileBytes,
+        required String filename,
+        required String scene}) =>
+    RustLib.instance.api.crateApiCoreUploadFile(
+        fileBytes: fileBytes, filename: filename, scene: scene);

@@ -8,6 +8,7 @@ import 'package:wechat_flutter/pages/wallet/pay_home_page.dart';
 import 'package:wechat_flutter/provider/global_model.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/view/list_tile_view.dart';
+import '../../src/rust/api.dart' as rust_api;
 
 class MinePage extends StatefulWidget {
   @override
@@ -18,9 +19,14 @@ class _MinePageState extends State<MinePage> {
   void action(name) {
     switch (name) {
       case '设置':
-        ImLoginManager.loginOut(context);
+        rust_api.coreLogout().then((_) {
+          ImLoginManager.loginOut(context);
+        }).catchError((e) {
+          debugPrint('coreLogout failed: $e');
+          ImLoginManager.loginOut(context);
+        });
         break;
-      case '支付':
+      case '服务':
         Get.to<void>(new PayHomePage());
         break;
       default:
@@ -30,20 +36,15 @@ class _MinePageState extends State<MinePage> {
   }
 
   Widget buildContent(Map<String, String> item) {
+    bool isGapAfter = item['label'] == '服务' || item['label'] == '表情' || item['label'] == '设置';
     return new ListTileView(
-      border: item['label'] == '支付' ||
-              item['label'] == '设置' ||
-              item['label'] == '表情'
-          ? null
-          : Border(bottom: BorderSide(color: lineColor, width: 0.2)),
+      border: isGapAfter ? null : Border(bottom: BorderSide(color: lineColor, width: 0.2)),
       title: item['label']!,
-      titleStyle: TextStyle(fontSize: 15.0),
+      titleStyle: TextStyle(fontSize: 16.0, color: Color(0xFF333333)),
       isLabel: false,
       padding: EdgeInsets.symmetric(vertical: 16.0),
       icon: item['icon']!,
-      margin: EdgeInsets.symmetric(
-          vertical:
-              item['label'] == '支付' || item['label'] == '设置' ? 10.0 : 0.0),
+      margin: EdgeInsets.only(bottom: isGapAfter ? 10.0 : 0.0),
       onPressed: () => action(item['label']),
       width: 25.0,
       fit: BoxFit.cover,
@@ -61,69 +62,118 @@ class _MinePageState extends State<MinePage> {
 
   Widget body(GlobalModel model) {
     List<Map<String, String>> data = [
-      {'label': '支付', 'icon': 'assets/images/mine/ic_pay.png'},
+      {'label': '服务', 'icon': 'assets/images/mine/ic_pay.png'},
       {'label': '收藏', 'icon': 'assets/images/favorite.webp'},
-      {'label': '相册', 'icon': 'assets/images/mine/ic_card_package.png'},
-      {'label': '卡片', 'icon': 'assets/images/mine/ic_card_package.png'},
+      {'label': '朋友圈', 'icon': 'assets/images/discover/ff_Icon_album.webp'},
+      {'label': '视频号与公众号', 'icon': 'assets/images/discover/ff_Icon_browse.webp'},
+      {'label': '小店与卡包', 'icon': 'assets/images/mine/ic_card_package.png'},
       {'label': '表情', 'icon': 'assets/images/mine/ic_emoji.png'},
       {'label': '设置', 'icon': 'assets/images/mine/ic_setting.png'},
     ];
 
-    var row = [
-      new SizedBox(
-        width: 60.0,
-        height: 60.0,
-        child: new ClipRRect(
-          borderRadius: BorderRadius.all(Radius.circular(5.0)),
-          child: strNoEmpty(model.avatar)
-              ? dynamicAvatar(model.avatar)
-              : new Image.asset(defIcon, fit: BoxFit.cover),
+    var topRow = new Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        new SizedBox(
+          width: 68.0,
+          height: 68.0,
+          child: new ClipRRect(
+            borderRadius: BorderRadius.all(Radius.circular(8.0)),
+            child: strNoEmpty(model.avatar)
+                ? dynamicAvatar(model.avatar)
+                : new Image.asset(defIcon, fit: BoxFit.cover),
+          ),
         ),
-      ),
-      new Container(
-        margin: EdgeInsets.only(left: 15.0),
-        height: 60.0,
-        child: new Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            new Text(
-              model.nickName ?? model.account,
-              style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 20.0,
-                  fontWeight: FontWeight.w500),
-            ),
-            new Text(
-              '微信号：' + model.account,
-              style: TextStyle(color: mainTextColor),
-            ),
-          ],
+        SizedBox(width: 15.0),
+        new Expanded(
+          child: new Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              new Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  new Expanded(
+                    child: new Text(
+                      model.nickName ?? model.account,
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 22.0,
+                          fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  new Container(
+                    width: 14.0,
+                    margin: EdgeInsets.only(right: 0.0),
+                    child: new Image.asset('assets/images/mine/ic_small_code.png',
+                        color: mainTextColor.withOpacity(0.5), fit: BoxFit.cover),
+                  ),
+                ],
+              ),
+              SizedBox(height: 5),
+              new Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  new Expanded(
+                    child: new Text(
+                      '微信号：' + model.account,
+                      style: TextStyle(color: mainTextColor, fontSize: 14),
+                    ),
+                  ),
+                  new Image.asset('assets/images/ic_right_arrow_grey.webp',
+                      width: 7.0, 
+                      color: mainTextColor.withOpacity(0.5), // Match the exact color of bottom list items
+                      fit: BoxFit.cover),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-      new Spacer(),
-      new Container(
-        width: 13.0,
-        margin: EdgeInsets.only(right: 12.0),
-        child: new Image.asset('assets/images/mine/ic_small_code.png',
-            color: mainTextColor.withOpacity(0.5), fit: BoxFit.cover),
-      ),
-      new Image.asset('assets/images/ic_right_arrow_grey.webp',
-          width: 7.0, fit: BoxFit.cover)
-    ];
+      ],
+    );
+
+    var statusRow = new Row(
+      children: [
+        SizedBox(width: 68.0 + 15.0), // Align with text left margin
+        new Container(
+          padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.withOpacity(0.5)),
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.add, size: 12, color: Colors.grey),
+              SizedBox(width: 2),
+              Text("状态", style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
+        ),
+        SizedBox(width: 10),
+        Icon(Icons.panorama_fish_eye, size: 16, color: Colors.grey.withOpacity(0.6)),
+      ],
+    );
 
     return new Column(
       children: <Widget>[
         new InkWell(
           child: new Container(
             color: Colors.white,
-            height: (topBarHeight(context) * 2.5) - 10,
-            padding: EdgeInsets.only(left: 20.0, right: 20.0, top: 40.0),
-            child: new Row(
-                crossAxisAlignment: CrossAxisAlignment.center, children: row),
+            padding: EdgeInsets.only(left: 20.0, right: 20.0, top: topBarHeight(context) - 5.0, bottom: 25.0),
+            child: new Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                topRow,
+                SizedBox(height: 12.0),
+                statusRow,
+              ],
+            ),
           ),
           onTap: () => Get.to<void>(new PersonalInfoPage()),
         ),
+        new SizedBox(height: 10.0),
         new Column(children: data.map(buildContent).toList()),
       ],
     );

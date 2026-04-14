@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import '../../im/login_handle.dart';
-import '../../provider/login_model.dart';
 import '../../src/rust/api.dart' as rust_api;
 import '../../tools/wechat_flutter.dart';
 import '../root/root_page.dart';
@@ -28,8 +26,7 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
     }
     
     try {
-      final areaCode = RegExp(r'\((.*?)\)').firstMatch(Provider.of<LoginModel>(context, listen: false).area)?.group(1);
-      await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: areaCode);
+      await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: null);
       await ImLoginManager.login(_accountC.text, context);
       showToast('登录成功');
       Get.offAll(const RootPage());

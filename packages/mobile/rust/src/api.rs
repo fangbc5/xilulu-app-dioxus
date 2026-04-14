@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use xilulu_core::api::auth::{
-    login, login_or_register, register, send_verify_code, LoginOrRegisterRequest, LoginRequest,
+    logout, login, login_or_register, register, send_verify_code, LoginOrRegisterRequest, LoginRequest,
     RegisterRequest,
 };
 use xilulu_core::api::client::ApiClient;
@@ -162,6 +162,17 @@ pub async fn core_send_verify_code(mobile: String) -> Result<(), String> {
     send_verify_code(&GLOBAL_API_CLIENT, &mobile)
         .await
         .map_err(|e| e.to_string())
+}
+
+pub async fn core_logout() -> Result<(), String> {
+    match logout(&GLOBAL_API_CLIENT).await {
+        Ok(_) => {
+            let _ = GLOBAL_STORAGE.remove("access_token").await;
+            let _ = GLOBAL_STORAGE.remove("refresh_token").await;
+            Ok(())
+        }
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 pub async fn core_upload_file(
