@@ -12,6 +12,8 @@ class LoginEmailPwdPage extends StatefulWidget {
   @override
   _LoginEmailPwdPageState createState() => _LoginEmailPwdPageState();
 }
+import 'package:provider/provider.dart';
+import '../../models/model.dart';
 
 class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
   final TextEditingController _accountC = TextEditingController();
@@ -25,7 +27,8 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
     }
     
     try {
-      await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text);
+      final areaCode = RegExp(r'\((.*?)\)').firstMatch(Provider.of<LoginModel>(context, listen: false).area)?.group(1);
+      await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: areaCode);
       await ImLoginManager.login(_accountC.text, context);
       showToast('登录成功');
       Get.offAll(const RootPage());

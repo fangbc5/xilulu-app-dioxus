@@ -55,15 +55,32 @@ pub async fn ping_core() -> String {
 pub async fn core_login_with_pwd(
     account: String,
     password: Option<String>,
+    region: Option<String>,
 ) -> Result<String, String> {
+    let is_email = account.contains('@');
+    let is_mobile = account.chars().all(|c| c.is_ascii_digit()) && account.len() >= 5;
+    
+    let mut mobile = None;
+    let mut email = None;
+    let mut username = None;
+    
+    if is_email {
+        email = Some(account.as_str());
+    } else if is_mobile {
+        mobile = Some(account.as_str());
+    } else {
+        username = Some(account.as_str());
+    }
+
     let req = LoginRequest {
-        mobile: Some(&account),
+        mobile,
         password: password.as_deref(),
-        username: None,
-        email: None,
+        username,
+        email,
         code: None,
         captcha_id: None,
         captcha: None,
+        region: region.as_deref(),
     };
     match login(&GLOBAL_API_CLIENT, req).await {
         Ok(resp) => {
@@ -80,11 +97,13 @@ pub async fn core_login_with_pwd(
 pub async fn core_login_or_register_by_code(
     mobile: String,
     code: String,
+    region: Option<String>,
 ) -> Result<String, String> {
     let req = LoginOrRegisterRequest {
         mobile: Some(&mobile),
         email: None,
         code: &code,
+        region: region.as_deref(),
     };
     match login_or_register(&GLOBAL_API_CLIENT, req).await {
         Ok(resp) => {
@@ -101,19 +120,38 @@ pub async fn core_login_or_register_by_code(
 }
 
 pub async fn core_register(
-    mobile: String,
+    account: String,
     password: Option<String>,
     nickname: Option<String>,
+    avatar: Option<String>,
+    region: Option<String>,
 ) -> Result<(), String> {
+    let is_email = account.contains('@');
+    let is_mobile = account.chars().all(|c| c.is_ascii_digit()) && account.len() >= 5;
+    
+    let mut mobile = None;
+    let mut email = None;
+    let mut username = None;
+    
+    if is_email {
+        email = Some(account.as_str());
+    } else if is_mobile {
+        mobile = Some(account.as_str());
+    } else {
+        username = Some(account.as_str());
+    }
+
     let req = RegisterRequest {
-        mobile: Some(&mobile),
+        mobile,
         password: password.as_deref(),
         nick_name: nickname.as_deref(),
-        username: None,
-        email: None,
+        username,
+        email,
         code: None,
         captcha_id: None,
         captcha: None,
+        avatar: avatar.as_deref(),
+        region: region.as_deref(),
     };
     register(&GLOBAL_API_CLIENT, req)
         .await

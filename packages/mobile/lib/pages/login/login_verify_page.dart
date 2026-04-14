@@ -32,9 +32,9 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
     try {
       String resp;
       if (isPasswordMode) {
-        resp = await rust_api.coreLoginWithPwd(account: widget.mobile, password: _tC.text);
+        resp = await rust_api.coreLoginWithPwd(account: widget.mobile, password: _tC.text, region: widget.areaCode);
       } else {
-        resp = await rust_api.coreLoginOrRegisterByCode(mobile: widget.mobile, code: _tC.text);
+        resp = await rust_api.coreLoginOrRegisterByCode(mobile: widget.mobile, code: _tC.text, region: widget.areaCode);
       }
       
       // Parse token if needed to save locally, but rust level already saves it.

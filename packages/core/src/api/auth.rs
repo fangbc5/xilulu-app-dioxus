@@ -10,6 +10,7 @@ pub struct LoginRequest<'a> {
     pub code: Option<&'a str>,
     pub captcha_id: Option<&'a str>,
     pub captcha: Option<&'a str>,
+    pub region: Option<&'a str>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -44,6 +45,8 @@ pub struct RegisterRequest<'a> {
     pub captcha_id: Option<&'a str>,
     pub captcha: Option<&'a str>,
     pub nick_name: Option<&'a str>,
+    pub avatar: Option<&'a str>,
+    pub region: Option<&'a str>,
 }
 
 #[derive(Serialize)]
@@ -51,6 +54,7 @@ pub struct LoginOrRegisterRequest<'a> {
     pub mobile: Option<&'a str>,
     pub email: Option<&'a str>,
     pub code: &'a str,
+    pub region: Option<&'a str>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
