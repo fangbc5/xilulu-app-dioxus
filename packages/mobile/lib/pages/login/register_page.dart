@@ -72,15 +72,14 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       const SizedBox(height: 30),
       Container(
-        padding: const EdgeInsets.symmetric(vertical: 5.0),
+        margin: const EdgeInsets.symmetric(horizontal: 25.0),
+        padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
           children: <Widget>[
-            Container(
+            SizedBox(
               width: Get.width * 0.25,
-              alignment: Alignment.centerLeft,
-              margin: const EdgeInsets.only(left: 25.0),
               child: const Text(
                 '昵称',
                 style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
@@ -89,9 +88,10 @@ class _RegisterPageState extends State<RegisterPage> {
             Expanded(
               child: TextField(
                 controller: nickC,
+                style: const TextStyle(fontSize: 16.0),
                 decoration: InputDecoration(
                     hintText: '请填写昵称',
-                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.8)),
+                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
                 onChanged: (String text) => setState(() {}),
               )
@@ -100,15 +100,14 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       Container(
-        padding: const EdgeInsets.symmetric(vertical: 15.0),
+        margin: const EdgeInsets.symmetric(horizontal: 25.0),
+        padding: const EdgeInsets.only(top: 15.0, bottom: 15.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
           children: <Widget>[
-            Container(
+            SizedBox(
               width: Get.width * 0.25,
-              alignment: Alignment.centerLeft,
-              margin: const EdgeInsets.only(left: 25.0),
               child: const Text('国家/地区',
                   style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400)),
             ),
@@ -125,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     Text(
-                      model.area,
+                      model.area.replaceAll(RegExp(r'\s*\(.*\)'), ''),
                       style: const TextStyle(color: Colors.black, fontSize: 16.0, fontWeight: FontWeight.w400),
                     ),
                     const Icon(Icons.chevron_right, color: Colors.grey)
@@ -137,15 +136,14 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       Container(
-        padding: const EdgeInsets.only(bottom: 5.0),
+        margin: const EdgeInsets.symmetric(horizontal: 25.0),
+        padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
           children: <Widget>[
-            Container(
+            SizedBox(
               width: Get.width * 0.25,
-              alignment: Alignment.centerLeft,
-              margin: const EdgeInsets.only(left: 25.0),
               child: const Text(
                 '手机号',
                 style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
@@ -156,9 +154,10 @@ class _RegisterPageState extends State<RegisterPage> {
               child: TextField(
                 controller: phoneC,
                 keyboardType: TextInputType.phone,
+                style: const TextStyle(fontSize: 16.0),
                 decoration: InputDecoration(
                     hintText: '请填写手机号',
-                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.8)),
+                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
                 onChanged: (String text) => setState(() {}),
               )
@@ -167,15 +166,14 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       Container(
-        padding: const EdgeInsets.only(bottom: 5.0),
+        margin: const EdgeInsets.symmetric(horizontal: 25.0),
+        padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
         child: Row(
           children: <Widget>[
-            Container(
+            SizedBox(
               width: Get.width * 0.25,
-              alignment: Alignment.centerLeft,
-              margin: const EdgeInsets.only(left: 25.0),
               child: const Text(
                 '密码',
                 style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
@@ -185,9 +183,10 @@ class _RegisterPageState extends State<RegisterPage> {
               child: TextField(
                 controller: pWC,
                 obscureText: !isPwdVisible,
+                style: const TextStyle(textBaseline: TextBaseline.alphabetic, fontSize: 16.0),
                 decoration: InputDecoration(
                     hintText: '请设置密码',
-                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.8)),
+                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
                 onChanged: (String text) => setState(() {}),
               )
@@ -251,7 +250,7 @@ class _RegisterPageState extends State<RegisterPage> {
       Center(
         child: ComMomButton(
           text: '同意并继续',
-          width: Get.width * 0.6,
+          width: Get.width * 0.45,
           height: 48.0,
         style: TextStyle(
             color: pWC.text == '' || phoneC.text == '' || nickC.text == '' || !isSelect ? Colors.grey.withOpacity(0.8) : Colors.white,
@@ -281,11 +280,8 @@ class _RegisterPageState extends State<RegisterPage> {
       )),
     ];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, children: column),
-    );
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: column);
   }
 
   @override
@@ -293,10 +289,12 @@ class _RegisterPageState extends State<RegisterPage> {
     final LoginModel model = Provider.of<LoginModel>(context);
 
     return Scaffold(
-      appBar:
-          const ComMomBar(leadingImg: 'assets/images/bar_close.png'),
+      backgroundColor: Colors.white,
+      appBar: const ComMomBar(
+          leadingImg: 'assets/images/bar_close.png', 
+          backgroundColor: Colors.white),
       body: MainInputBody(
-        color: appBarColor,
+        color: Colors.white,
         child: SingleChildScrollView(child: body(model)),
         onTap: () => setState(() => <dynamic, dynamic>{}),
       ),

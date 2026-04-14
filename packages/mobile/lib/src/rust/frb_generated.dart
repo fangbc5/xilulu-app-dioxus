@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1586121707;
+  int get rustContentHash => 1556665094;
 
   static const ExternalLibraryLoaderConfig kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -80,6 +80,17 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiCoreLoginOrRegisterByCode(
+      {required String mobile, required String code});
+
+  Future<String> crateApiCoreLoginWithPwd(
+      {required String account, String? password});
+
+  Future<void> crateApiCoreRegister(
+      {required String mobile, String? password, String? nickname});
+
+  Future<void> crateApiCoreSendVerifyCode({required String mobile});
+
   void crateApiInitApp();
 
   Future<String> crateApiPingCore();
@@ -94,12 +105,120 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<String> crateApiCoreLoginOrRegisterByCode(
+      {required String mobile, required String code}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (NativePortType port_) {
+        final SseSerializer serializer =
+            SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(mobile, serializer);
+        sse_encode_String(code, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 1, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCoreLoginOrRegisterByCodeConstMeta,
+      argValues: <dynamic>[mobile, code],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreLoginOrRegisterByCodeConstMeta =>
+      const TaskConstMeta(
+        debugName: 'core_login_or_register_by_code',
+        argNames: <String>['mobile', 'code'],
+      );
+
+  @override
+  Future<String> crateApiCoreLoginWithPwd(
+      {required String account, String? password}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (NativePortType port_) {
+        final SseSerializer serializer =
+            SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(account, serializer);
+        sse_encode_opt_String(password, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 2, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCoreLoginWithPwdConstMeta,
+      argValues: <dynamic>[account, password],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreLoginWithPwdConstMeta => const TaskConstMeta(
+        debugName: 'core_login_with_pwd',
+        argNames: <String>['account', 'password'],
+      );
+
+  @override
+  Future<void> crateApiCoreRegister(
+      {required String mobile, String? password, String? nickname}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (NativePortType port_) {
+        final SseSerializer serializer =
+            SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(mobile, serializer);
+        sse_encode_opt_String(password, serializer);
+        sse_encode_opt_String(nickname, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 3, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCoreRegisterConstMeta,
+      argValues: <dynamic>[mobile, password, nickname],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreRegisterConstMeta => const TaskConstMeta(
+        debugName: 'core_register',
+        argNames: <String>['mobile', 'password', 'nickname'],
+      );
+
+  @override
+  Future<void> crateApiCoreSendVerifyCode({required String mobile}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (NativePortType port_) {
+        final SseSerializer serializer =
+            SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(mobile, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCoreSendVerifyCodeConstMeta,
+      argValues: <dynamic>[mobile],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreSendVerifyCodeConstMeta => const TaskConstMeta(
+        debugName: 'core_send_verify_code',
+        argNames: <String>['mobile'],
+      );
+
+  @override
   void crateApiInitApp() {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final SseSerializer serializer =
             SseSerializer(generalizedFrbRustBinding);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -123,7 +242,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final SseSerializer serializer =
             SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 2, port: port_);
+            funcId: 6, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -153,6 +272,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -176,6 +301,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final int len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return sse_decode_String(deserializer);
+    } else {
+      return null;
+    }
   }
 
   @protected
@@ -213,6 +349,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
   }
 
   @protected

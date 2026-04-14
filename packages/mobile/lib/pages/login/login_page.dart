@@ -1,22 +1,23 @@
-import 'dart:ui';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:wechat_flutter/im/login_handle.dart';
-import 'package:wechat_flutter/pages/login/select_location_page.dart';
-import 'package:wechat_flutter/provider/login_model.dart';
-import 'package:wechat_flutter/tools/wechat_flutter.dart';
+
+import '../../provider/login_model.dart';
+import '../../tools/wechat_flutter.dart';
+import 'login_email_pwd_page.dart';
+import 'login_verify_page.dart';
+import 'select_location_page.dart';
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  TextEditingController _tC = new TextEditingController();
+  final TextEditingController _tC = TextEditingController();
+  bool isSelect = false;
 
   @override
   void initState() {
@@ -24,136 +25,126 @@ class _LoginPageState extends State<LoginPage> {
     initEdit();
   }
 
-  initEdit() async {
-    final user = await SharedUtil.instance.getString(Keys.account);
+  Future<void> initEdit() async {
+    final String? user = await SharedUtil.instance.getString(Keys.account);
     _tC.text = user ?? '';
   }
 
   Widget bottomItem(String item) {
-    return new Row(
+    return Row(
       children: <Widget>[
-        new InkWell(
-          child: new Text(item, style: TextStyle(color: tipColor)),
+        InkWell(
+          child: Text(item, style: const TextStyle(color: tipColor)),
           onTap: () {
             showToast( S.of(context).notOpen + item);
           },
         ),
-        item == S.of(context).weChatSecurityCenter
-            ? new Container()
-            : new Padding(
-                padding: EdgeInsets.symmetric(horizontal: 5.0),
-                child: new VerticalLine(height: 15.0),
+        if (item == '更多') Container() else Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                child: VerticalLine(height: 15.0),
               )
       ],
     );
   }
 
   Widget body(LoginModel model) {
-    return new Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        new Padding(
-          padding: EdgeInsets.only(
-              left: 20.0, top: mainSpace * 3, bottom: mainSpace * 2),
-          child: new Text(S.of(context).mobileNumberLogin,
-              style: TextStyle(fontSize: 25.0)),
+        const Padding(
+          padding: EdgeInsets.only(top: 80.0, bottom: 40.0),
+          child: Center(
+            child: Text('手机号登录', style: TextStyle(fontSize: 26.0, fontWeight: FontWeight.w500)),
+          )
         ),
-        new TextButton(
-          child: new Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10.0),
-            child: new Row(
-              children: <Widget>[
-                new Container(
-                  width: Get.width * 0.25,
-                  alignment: Alignment.centerLeft,
-                  child: new Text(S.of(context).phoneCity,
-                      style: TextStyle(
-                          fontSize: 16.0, fontWeight: FontWeight.w400)),
-                ),
-                new Expanded(
-                  child: new Text(
-                    model.area,
-                    style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 16.0,
-                        fontWeight: FontWeight.w400),
-                  ),
-                )
-              ],
-            ),
-          ),
-          onPressed: () async {
-            final result = await Get.to<String?>(new SelectLocationPage());
-            if (result == null) return;
-            model.area = result;
-            model.refresh();
-            SharedUtil.instance.saveString(Keys.area, result);
-          },
-        ),
-        new Container(
-          padding: EdgeInsets.only(bottom: 5.0),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 25.0),
+          padding: const EdgeInsets.only(top: 15.0, bottom: 15.0),
           decoration: BoxDecoration(
-              border:
-                  Border(bottom: BorderSide(color: Colors.grey, width: 0.15))),
-          child: new Row(
+              border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
+          child: Row(
             children: <Widget>[
-              new Container(
+              SizedBox(
                 width: Get.width * 0.25,
-                alignment: Alignment.centerLeft,
-                margin: EdgeInsets.only(left: 25.0),
-                child: new Text(
+                child: Text(S.of(context).phoneCity,
+                    style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400)),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final result = await Get.to<String?>(new SelectLocationPage());
+                    if (result == null) return;
+                    model.area = result;
+                    model.refresh();
+                    SharedUtil.instance.saveString(Keys.area, result);
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(
+                        model.area.replaceAll(RegExp(r'\s*\(.*\)'), ''), // Strip (+86)
+                        style: const TextStyle(color: Colors.black, fontSize: 16.0, fontWeight: FontWeight.w400),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey)
+                    ],
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 25.0),
+          padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
+          decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: Get.width * 0.25,
+                child: Text(
                   S.of(context).phoneNumber,
-                  style: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
+                  style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
                 ),
               ),
-              new Expanded(
-                  child: new TextField(
+              const Text('+86 ', style: TextStyle(fontSize: 16.0, color: Colors.grey)),
+              Expanded(
+                  child: TextField(
                 controller: _tC,
-                maxLines: 1,
-                style: TextStyle(textBaseline: TextBaseline.alphabetic),
+                style: const TextStyle(textBaseline: TextBaseline.alphabetic, fontSize: 16.0),
                 keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter(new RegExp(r'[0-9]'), allow: true)
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter(RegExp(r'[0-9]'), allow: true)
                 ],
                 decoration: InputDecoration(
-                    hintText: S.of(context).phoneNumberHint,
+                    hintText: '请填写手机号码',
+                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
                     border: InputBorder.none),
-                onChanged: (text) {
+                onChanged: (String text) {
                   setState(() {});
                 },
               ))
             ],
           ),
         ),
-        new Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
-          child: new InkWell(
-            child: new Text(
-              S.of(context).userLoginTip,
-              style: TextStyle(color: tipColor),
-            ),
-            onTap: () => showToast( S.of(context).notOpen),
+        Padding(
+          padding: const EdgeInsets.only(left: 25.0, top: 15.0, bottom: 5.0),
+          child: Text(
+            '上述手机号仅用于登录验证',
+            style: const TextStyle(color: Color.fromRGBO(175, 175, 175, 1.0), fontSize: 12),
           ),
         ),
-        new SizedBox(height: mainSpace * 2.5),
-        new ComMomButton(
-          text: S.of(context).nextStep,
-          style: TextStyle(
-              color:
-                  _tC.text == '' ? Colors.grey.withOpacity(0.8) : Colors.white),
-          margin: EdgeInsets.symmetric(horizontal: 10.0),
-          color: _tC.text == ''
-              ? Color.fromRGBO(226, 226, 226, 1.0)
-              : Color.fromRGBO(8, 191, 98, 1.0),
-          onTap: () {
-            if (_tC.text == '') {
-              showToast( '随便输入三位或以上');
-            } else if (_tC.text.length >= 3) {
-              ImLoginManager.login(_tC.text, context);
-            } else {
-              showToast( '请输入三位或以上');
-            }
-          },
+        Padding(
+          padding: const EdgeInsets.only(left: 25.0, bottom: 20.0),
+          child: InkWell(
+            child: Text(
+              '用微信号 /QQ 号 /邮箱登录',
+              style: TextStyle(color: Colors.blue[800], fontSize: 14),
+            ),
+            onTap: () {
+               Get.to(() => const LoginEmailPwdPage());
+            },
+          ),
         ),
       ],
     );
@@ -161,30 +152,78 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final model = Provider.of<LoginModel>(context);
+    final LoginModel model = Provider.of<LoginModel>(context);
 
-    List<String> btItem = [
-      S.of(context).retrievePW,
-      S.of(context).emergencyFreeze,
-      S.of(context).weChatSecurityCenter,
+    final List<String> btItem = <String>[
+      '找回密码',
+      '导出聊天记录',
+      '更多',
     ];
 
-    return new Scaffold(
-      appBar:
-          new ComMomBar(title: '', leadingImg: 'assets/images/bar_close.png'),
-      body: new MainInputBody(
-        color: appBarColor,
-        child: new Stack(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: const ComMomBar(
+          leadingImg: 'assets/images/bar_close.png', 
+          backgroundColor: Colors.white),
+      body: MainInputBody(
+        color: Colors.white,
+        child: Stack(
           children: <Widget>[
-            new SingleChildScrollView(child: body(model)),
-            new Positioned(
-              bottom: 10,
+            SingleChildScrollView(child: body(model)),
+            Positioned(
+              bottom: 80,
               left: 0,
               right: 0,
-              child: new Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: btItem.map(bottomItem).toList(),
-              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      InkWell(
+                        onTap: () => setState(() => isSelect = !isSelect),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 5),
+                          child: Icon(
+                            isSelect ? Icons.check_circle : Icons.radio_button_unchecked, 
+                            color: isSelect ? const Color.fromRGBO(8, 191, 98, 1.0) : Colors.grey, 
+                            size: 22
+                          ),
+                        ),
+                      ),
+                      const Text('登录后同步最近的聊天记录', style: TextStyle(color: Colors.grey, fontSize: 13))
+                    ],
+                  ),
+                  Center(
+                    child: ComMomButton(
+                      text: '同意并继续',
+                      width: Get.width * 0.45,
+                      height: 48.0,
+                      style: TextStyle(
+                          color: _tC.text == '' ? Colors.white.withOpacity(0.8) : Colors.white,
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.w500),
+                      margin: const EdgeInsets.only(top: 20.0, bottom: 40.0),
+                      color: _tC.text == ''
+                          ? const Color.fromRGBO(8, 191, 98, 0.5) // Light green when inactive based on screenshot
+                          : const Color.fromRGBO(8, 191, 98, 1.0),
+                      onTap: () {
+                        if (_tC.text == '') {
+                          showToast( '请输入手机号');
+                        } else if (_tC.text.length >= 3) {
+                          Get.to(() => LoginVerifyPage(mobile: _tC.text));
+                        } else {
+                          showToast( '请输入正确的手机号');
+                        }
+                      },
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: btItem.map(bottomItem).toList(),
+                  ),
+                ],
+              )
             ),
           ],
         ),

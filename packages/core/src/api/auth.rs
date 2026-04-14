@@ -12,21 +12,21 @@ pub struct LoginRequest<'a> {
     pub captcha: Option<&'a str>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct UserInfo {
     pub id: String,
     pub nickname: String,
     pub avatar: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct TenantInfo {
     pub id: String,
     pub name: String,
     pub is_owner: Option<bool>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct LoginResponse {
     pub access_token: String,
     pub refresh_token: String,
@@ -53,7 +53,7 @@ pub struct LoginOrRegisterRequest<'a> {
     pub code: &'a str,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct LoginOrRegisterResponse {
     pub is_new_user: bool,
     pub login_info: LoginResponse,
