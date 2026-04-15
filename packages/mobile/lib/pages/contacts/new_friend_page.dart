@@ -9,7 +9,7 @@ import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/orther/label_row.dart';
 import 'package:wechat_flutter/ui/view/search_main_view.dart';
 import 'package:wechat_flutter/ui/view/search_tile_view.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class NewFriendPage extends StatefulWidget {
   const NewFriendPage({super.key});
@@ -102,11 +102,16 @@ class _NewFriendPageState extends State<NewFriendPage> {
 
   /// 搜索好友
   Future search(String userName) async {
-    final List<V2TimUserFullInfo> data =
+    final List<XUserInfo> data =
         await getUsersProfile(<String>[userName]);
-    final V2TimUserFullInfo model = data[0];
-    if (model.allowType != null) {
-      Get.to<void>(AddFriendsDetails('search', model.userID!,
+    if (data.isEmpty) {
+      isResult = true;
+      setState(() {});
+      return;
+    }
+    final XUserInfo model = data[0];
+    if (model.nickName != null) {
+      Get.to<void>(AddFriendsDetails('search', model.userId,
           model.faceUrl ?? '', model.nickName ?? '', model.gender ?? 0));
     } else {
       isResult = true;

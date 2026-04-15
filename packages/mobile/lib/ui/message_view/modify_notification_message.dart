@@ -1,34 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
+/// 修改群公告系统消息
+class ModifyNotificationMessage extends StatelessWidget {
+  final XMessage model;
+  const ModifyNotificationMessage(this.model, {super.key});
 
-
-import '../../provider/global_model.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
-
-class ModifyNotificationMessage extends StatefulWidget {
-  const ModifyNotificationMessage(this.msg, {super.key});
-
-  final V2TimMessage msg;
-
-  @override
-  ModifyNotificationMessageState createState() =>
-      ModifyNotificationMessageState();
-}
-
-class ModifyNotificationMessageState extends State<ModifyNotificationMessage> {
   @override
   Widget build(BuildContext context) {
-    final V2TimGroupTipsElem groupTipsElem = widget.msg.groupTipsElem!;
-    final GlobalModel globalModel = Provider.of<GlobalModel>(context);
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
       alignment: Alignment.center,
-      margin: const EdgeInsets.symmetric(vertical: 5.0),
-      child: Text(
-        '${groupTipsElem.opMember.userID == globalModel.account ? "你" : groupTipsElem.opMember.nickName} 修改了群公告',
-        style: const TextStyle(
-            color: Color.fromRGBO(108, 108, 108, 0.8), fontSize: 11),
-      ),
+      child: Text('[系统消息] 群公告变更', style: TextStyle(color: Colors.grey, fontSize: 12)),
     );
   }
 }

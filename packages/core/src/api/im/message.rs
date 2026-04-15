@@ -119,3 +119,42 @@ pub async fn save_incoming_message(
     .execute(&db.pool)
     .await;
 }
+
+/// 从本地 SQLite 查询指定房间的历史消息
+pub async fn get_history_messages(
+    db: &crate::db::DbManager,
+    room_id: u64,
+    limit: i64,
+) -> Result<Vec<XMessage>, String> {
+    let rows = sqlx::query_as::<_, (String, i64, i64, i32, String, i32, i64)>(
+        r#"
+        SELECT msg_id, room_id, sender_uid, msg_type, content, local_status, created_at
+        FROM messages
+        WHERE room_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+        "#
+    )
+    .bind(room_id as i64)
+    .bind(limit)
+    .fetch_all(&db.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let messages: Vec<XMessage> = rows
+        .into_iter()
+        .map(|(msg_id, room_id, sender_uid, msg_type, content, local_status, created_at)| {
+            XMessage {
+                msg_id,
+                room_id: room_id as u64,
+                sender_uid: sender_uid as u64,
+                msg_type,
+                content,
+                local_status,
+                created_at: created_at as u64,
+            }
+        })
+        .collect();
+
+    Ok(messages)
+}

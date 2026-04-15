@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:wechat_flutter/im/info_handle.dart';
 import 'package:wechat_flutter/provider/loginc/global_loginc.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class GlobalModel extends ChangeNotifier {
   BuildContext? context;
@@ -51,19 +51,19 @@ class GlobalModel extends ChangeNotifier {
   }
 
   Future<void> initInfo() async {
-    final List<V2TimUserFullInfo> data = await getUsersProfile([account]);
+    final List<XUserInfo> data = await getUsersProfile([account]);
     if (data.isEmpty) {
       return;
     }
 
-    final V2TimUserFullInfo model = data[0];
-    nickName = model.nickName ?? model.userID ?? '';
+    final XUserInfo model = data[0];
+    nickName = model.nickName ?? model.userId;
 
     await SharedUtil.instance.saveString(Keys.nickName, nickName);
     avatar = model.faceUrl ?? '';
     await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
     gender = model.gender ?? 0;
-    await SharedUtil.instance.saveInt(Keys.gender, model.gender!);
+    await SharedUtil.instance.saveInt(Keys.gender, model.gender ?? 0);
   }
 
   @override

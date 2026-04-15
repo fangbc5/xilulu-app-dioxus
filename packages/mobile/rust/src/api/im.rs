@@ -12,7 +12,7 @@ lazy_static::lazy_static! {
     pub static ref GLOBAL_DB: tokio::sync::OnceCell<xilulu_core::db::DbManager> = tokio::sync::OnceCell::new();
 
     /// Flutter Event Sink
-    pub static ref FLUTTER_STREAM: std::sync::Mutex<Option<StreamSink<XEvent>>> = std::sync::Mutex::new(None);
+    pub static ref FLUTTER_STREAM: std::sync::Mutex<Option<StreamSink<String>>> = std::sync::Mutex::new(None);
 
     /// Global WS Client singleton
     pub static ref GLOBAL_WS_CLIENT: tokio::sync::OnceCell<Arc<WsClient>> = tokio::sync::OnceCell::new();
@@ -66,7 +66,9 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                     // 2. Transmit to Flutter
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
-                            let _ = sink.add(XEvent::OnNewMessageReceived(xmsg));
+                            if let Ok(json_str) = serde_json::to_string(&XEvent::OnNewMessageReceived(xmsg)) {
+                                let _ = sink.add(json_str);
+                            }
                         }
                     }
                 }
@@ -77,7 +79,7 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
     Ok(())
 }
 
-pub fn core_subscribe_im_events(sink: StreamSink<XEvent>) {
+pub fn core_subscribe_im_events(sink: StreamSink<String>) {
     if let Ok(mut guard) = FLUTTER_STREAM.lock() {
         *guard = Some(sink);
     }
@@ -101,3 +103,17 @@ pub async fn core_send_text_message(
         }
     }
 }
+
+/// 从本地 SQLite 获取历史消息，返回 JSON 数组字符串
+pub async fn core_get_history_messages(
+    room_id: u64,
+    limit: i64,
+) -> Result<String, String> {
+    let db = GLOBAL_DB
+        .get()
+        .ok_or("Database not initialized! Call core_init_sdk first.")?;
+
+    let messages = xilulu_core::api::im::message::get_history_messages(db, room_id, limit).await?;
+    serde_json::to_string(&messages).map_err(|e| e.to_string())
+}
+

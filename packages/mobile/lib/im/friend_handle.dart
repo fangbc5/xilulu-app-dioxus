@@ -1,92 +1,62 @@
+/// 好友管理 - 自研 SDK 实现
+/// TODO: 后续对接 Rust FFI 的好友相关接口
 import 'package:flutter/material.dart';
-
-
-
-
-
-
-
-
+import 'package:flutter/services.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 typedef OnSuCc = void Function(bool v);
 
+/// 添加好友
+/// TODO: 对接 Rust SDK 添加好友
 Future<dynamic> addFriend(String userName, BuildContext context,
     {OnSuCc? suCc}) async {
   try {
-    final V2TimValueCallback<V2TimFriendOperationResult> result =
-        await V2TIMManager().getFriendshipManager().addFriend(
-            userID: userName, addType: FriendTypeEnum.V2TIM_FRIEND_TYPE_BOTH);
-    if (result.data?.resultCode == 0) {
-      showToast('添加成功');
-      return;
-    }
-    if (result.toString().contains('Friend_Exist')) {
-      showToast('朋友已存在');
-    } else if (result.toString().contains('30014')) {
-      showToast('对方好友人数上限');
-      return;
-    } else if (result.toString().contains('30003')) {
-      showToast('添加的这个账号不存在');
-      return;
-    } else {
-      showToast('添加成功');
-    }
+    // TODO: 调用 Rust FFI 添加好友
+    showToast('添加成功');
     if (suCc == null) {
       popToHomePage(context);
     } else {
       suCc(true);
     }
   } on PlatformException {
-    debugPrint('Dim添加好友  失败');
+    debugPrint('添加好友失败');
   }
 }
 
+/// 删除好友
+/// TODO: 对接 Rust SDK 删除好友
 Future<dynamic> delFriend(String userName, BuildContext context,
     {OnSuCc? suCc}) async {
   try {
-    final V2TimValueCallback<List<V2TimFriendOperationResult>> result =
-        await V2TIMManager().getFriendshipManager().deleteFromFriendList(
-            userIDList: <String>[userName],
-            deleteType: FriendTypeEnum.V2TIM_FRIEND_TYPE_BOTH);
-    if (result.code == 0) {
-      showToast('删除成功');
-    } else {
-      showToast(result.desc);
-    }
-
+    // TODO: 调用 Rust FFI 删除好友
+    showToast('删除成功');
     if (suCc == null) {
       popToHomePage(context);
     } else {
       suCc(true);
     }
-
-    return result;
   } on PlatformException {
-    debugPrint('删除好友  失败');
+    debugPrint('删除好友失败');
   }
 }
 
-Future<List<V2TimFriendInfo>> getContactsFriends(String userName) async {
-  final V2TimValueCallback<List<V2TimFriendInfo>> result =
-      await V2TIMManager().getFriendshipManager().getFriendList();
-  return result.data ?? <V2TimFriendInfo>[];
+/// 获取好友列表
+/// TODO: 对接 Rust SDK 获取好友列表
+Future<List<XFriendInfo>> getContactsFriends(String userName) async {
+  // 暂时返回一个硬编码的好友数据，后续对接 Rust SDK
+  final fakeFriend = XFriendInfo(
+    userId: "1",
+    friendRemark: "测试机器人 (Bot)",
+    userProfile: XUserInfo(userId: "1", nickName: "机器人"),
+    friendAddSource: "system",
+  );
+  return [fakeFriend];
 }
 
+/// 创建群聊
+/// TODO: 对接 Rust SDK 创建群聊
 Future<bool> createGroupChat(List<String> personList, {String? name}) async {
-  final V2TimValueCallback<String> call =
-      await V2TIMManager().getGroupManager().createGroup(
-            groupType: GroupType.Public,
-            groupName: name ?? '',
-            memberList: personList.map(
-              (String e) {
-                return V2TimGroupMember(
-                  userID: e,
-                  role: GroupMemberRoleTypeEnum.V2TIM_GROUP_MEMBER_ROLE_MEMBER,
-                );
-              },
-            ).toList(),
-          );
-  return call.code == 0;
+  // TODO: 调用 Rust FFI 创建群聊
+  return true;
 }

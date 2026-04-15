@@ -7,7 +7,7 @@ import 'package:wechat_flutter/pages/chat/chat_page.dart';
 import 'package:wechat_flutter/pages/contacts/group_launch_page.dart';
 import 'package:wechat_flutter/pages/home/search_page.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class GroupListPage extends StatefulWidget {
   @override
@@ -15,7 +15,7 @@ class GroupListPage extends StatefulWidget {
 }
 
 class _GroupListPageState extends State<GroupListPage> {
-  List<V2TimGroupInfo> _groupList = [];
+  List<XGroupInfo> _groupList = [];
 
   @override
   void initState() {
@@ -28,7 +28,7 @@ class _GroupListPageState extends State<GroupListPage> {
 
   // 获取群聊列表
   Future<void> _getGroupListModel() async {
-    final List<V2TimGroupInfo> list = await DimGroup.getGroupListModel();
+    final List<XGroupInfo> list = await DimGroup.getGroupListModel();
     setState(() => _groupList = list);
   }
 
@@ -38,7 +38,7 @@ class _GroupListPageState extends State<GroupListPage> {
       onPressed: () {
         Get.to<void>(ChatPage(
           title: gName,
-          type: ConversationType.V2TIM_GROUP,
+          type: ConversationType.group,
           id: gId,
 //                returnType: 1,
         ));
@@ -115,11 +115,11 @@ class _GroupListPageState extends State<GroupListPage> {
                       groupItem(
                         context,
                         item.groupName ?? '',
-                        item.groupID ?? '',
+                        item.groupId ?? '',
                         !strNoEmpty(item.faceUrl)
                             ? defGroupAvatar
                             : item.faceUrl!,
-                        item.groupID ?? '',
+                        item.groupId ?? '',
                       )
                     else
                       SizedBox(height: 1),

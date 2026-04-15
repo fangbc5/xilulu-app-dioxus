@@ -3,12 +3,11 @@ import 'package:get/get.dart';
 
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/message_view/content_msg.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
 
 class MyConversationView extends StatefulWidget {
   final String? imageUrl;
   final String? title;
-  final V2TimMessage? content;
+  final String? content;
   final Widget? time;
   final bool isBorder;
 

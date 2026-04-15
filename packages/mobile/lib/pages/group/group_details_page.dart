@@ -20,7 +20,7 @@ import 'package:wechat_flutter/ui/dialog/confirm_alert.dart';
 import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 
 import '../../im/info_handle.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class GroupDetailsPage extends StatefulWidget {
   final String peer;
@@ -46,10 +46,10 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
 
   bool isGroupOwner = false;
 
-  List<V2TimGroupMemberFullInfo?> memberList = <V2TimGroupMemberFullInfo?>[
-    V2TimGroupMemberFullInfo(userID: '+'),
+  List<XGroupMember?> memberList = <XGroupMember?>[
+    XGroupMember(userID: '+'),
   ];
-  V2TimGroupInfo? dataGroup;
+  XGroupInfo? dataGroup;
 
   @override
   void initState() {
@@ -67,10 +67,10 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
   }
 
   _getGroupInfo() async {
-    final List<V2TimGroupInfoResult> listInfo =
+    final List<XGroupInfo> listInfo =
         await DimGroup.getGroupInfoListModel(<String>[widget.peer]);
 
-    dataGroup = listInfo.first.groupInfo!;
+    dataGroup = listInfo.first;
     final String? user = await SharedUtil.instance.getString(Keys.account);
     isGroupOwner = dataGroup!.owner == user;
     groupName = dataGroup!.groupName.toString();
@@ -83,23 +83,23 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
   }
 
   _getGroupMembers() async {
-    final List<V2TimGroupMemberFullInfo?>? memberDataList =
+    final List<XGroupMember?>? memberDataList =
         await DimGroup.getGroupMembersListModelLIST(widget.peer);
 
     memberList.insertAll(0, memberDataList!.toSet());
     setState(() {});
   }
 
-  Widget memberItem(V2TimGroupMemberFullInfo? item) {
-    if (item?.userID == null) {
+  Widget memberItem(XGroupMember? item) {
+    if (item?.userId == null) {
       return Container();
     }
-    if (item!.userID == '+' || item.userID == '-') {
+    if (item!.userId == '+' || item.userId == '-') {
       return InkWell(
         child: SizedBox(
           width: (Get.width - 60) / 5,
           child: Image.asset(
-            'assets/images/group/${item.userID}.png',
+            'assets/images/group/${item.userId}.png',
             height: 48.0,
             width: 48.0,
           ),
@@ -107,20 +107,20 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
         onTap: () => Get.to<void>(() => SelectMembersPage()),
       );
     }
-    return FutureBuilder<List<V2TimUserFullInfo>>(
-      future: getUsersProfile(<String>[item.userID]),
+    return FutureBuilder<List<XUserInfo>>(
+      future: getUsersProfile(<String>[item.userId]),
       builder:
-          (BuildContext context, AsyncSnapshot<List<V2TimUserFullInfo>> snap) {
-        final List<V2TimUserFullInfo> data = snap.data ?? <V2TimUserFullInfo>[];
+          (BuildContext context, AsyncSnapshot<List<XUserInfo>> snap) {
+        final List<XUserInfo> data = snap.data ?? <XUserInfo>[];
         if (data.isEmpty) {
           return Container();
         }
-        final V2TimUserFullInfo item = data.first;
+        final XUserInfo item = data.first;
         return SizedBox(
           width: (Get.width - 60) / 5,
           child: TextButton(
             onPressed: () => Get.to<void>(() =>
-                GroupMemberDetails(Data.user() == item.userID, item.userID!)),
+                GroupMemberDetails(Data.user() == item.userId, item.userId!)),
             style: TextButton.styleFrom(padding: EdgeInsets.zero),
             child: Column(
               children: <Widget>[
@@ -147,7 +147,7 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
                   height: 20.0,
                   width: 50,
                   child: Text(
-                    '${!strNoEmpty(item.nickName) ? item.userID : item.nickName!.length > 4 ? '${item.nickName!.substring(0, 3)}...' : item.nickName!}',
+                    '${!strNoEmpty(item.nickName) ? item.userId : item.nickName!.length > 4 ? '${item.nickName!.substring(0, 3)}...' : item.nickName!}',
                     style: const TextStyle(fontSize: 12.0),
                   ),
                 ),

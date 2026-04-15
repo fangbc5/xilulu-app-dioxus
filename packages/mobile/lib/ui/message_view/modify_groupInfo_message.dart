@@ -1,34 +1,17 @@
-import 'package:wechat_flutter/im/tencent_mocks.dart';
 import 'package:flutter/material.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
+/// 修改群资料系统消息
+class ModifyGroupInfoMessage extends StatelessWidget {
+  final XMessage model;
+  const ModifyGroupInfoMessage(this.model, {super.key});
 
-
-class ModifyGroupInfoMessage extends StatefulWidget {
-  const ModifyGroupInfoMessage(this.msg, {super.key});
-
-  final V2TimMessage msg;
-
-  @override
-  ModifyGroupInfoMessageState createState() => ModifyGroupInfoMessageState();
-}
-
-class ModifyGroupInfoMessageState extends State<ModifyGroupInfoMessage> {
   @override
   Widget build(BuildContext context) {
-    final V2TimGroupTipsElem groupTipsElem = widget.msg.groupTipsElem!;
-
-    if (groupTipsElem.groupChangeInfoList?.isNotEmpty ?? false) {
-      return Container(
-        alignment: Alignment.center,
-        margin: const EdgeInsets.symmetric(vertical: 5.0),
-        child: Text(
-          '${groupTipsElem.opMember.nickName ?? ''} 修改群名称为 ”${groupTipsElem.groupChangeInfoList?.first?.value ?? ""}“',
-          style: const TextStyle(
-              color: Color.fromRGBO(108, 108, 108, 0.8), fontSize: 11),
-        ),
-      );
-    } else {
-      return Container();
-    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      alignment: Alignment.center,
+      child: Text('[系统消息] 群资料变更', style: TextStyle(color: Colors.grey, fontSize: 12)),
+    );
   }
 }

@@ -14,7 +14,7 @@ import 'package:wechat_flutter/ui/dialog/friend_item_dialog.dart';
 import 'package:wechat_flutter/ui/item/contact_card.dart';
 import 'package:wechat_flutter/ui/orther/button_row.dart';
 import 'package:wechat_flutter/ui/orther/label_row.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class ContactsDetailsPage extends StatefulWidget {
   final String? avatar, title, id;
@@ -63,7 +63,7 @@ class _ContactsDetailsPageState extends State<ContactsDetailsPage> {
           Get.off(new ChatPage(
               id: widget.id!,
               title: widget.title!,
-              type: ConversationType.V2TIM_C2C));
+              type: ConversationType.c2c));
         },
       ),
       new Visibility(

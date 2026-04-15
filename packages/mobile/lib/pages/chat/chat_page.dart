@@ -16,7 +16,7 @@ import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 
 import '../../tools/event/im_event.dart';
 import 'chat_info_page.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
 enum ButtonType { voice, more }
 
@@ -32,7 +32,7 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  List<V2TimMessage> chatData = <V2TimMessage>[];
+  List<XMessage> chatData = <XMessage>[];
   StreamSubscription<dynamic>? _msgStreamSubs;
   bool _isVoice = false;
   bool _isMore = false;
@@ -66,7 +66,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> getChatMsgData() async {
-    final List<V2TimMessage> listChat =
+    final List<XMessage> listChat =
         await ChatDataRep().repData(widget.id, widget.type);
     chatData.clear();
     chatData.addAll(listChat.reversed);

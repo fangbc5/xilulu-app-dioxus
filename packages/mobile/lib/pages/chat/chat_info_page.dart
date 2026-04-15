@@ -9,7 +9,7 @@ import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/dialog/confirm_alert.dart';
 import 'package:wechat_flutter/ui/item/chat_mamber.dart';
 import 'package:wechat_flutter/ui/orther/label_row.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class ChatInfoPage extends StatefulWidget {
   final String id;
@@ -21,7 +21,7 @@ class ChatInfoPage extends StatefulWidget {
 }
 
 class _ChatInfoPageState extends State<ChatInfoPage> {
-  V2TimUserFullInfo? model;
+  XUserInfo? model;
 
   bool isRemind = false;
   bool isTop = false;
@@ -96,7 +96,7 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
   }
 
   Future<void> getInfo() async {
-    final List<V2TimUserFullInfo> infoList = await getUsersProfile([widget.id]);
+    final List<XUserInfo> infoList = await getUsersProfile([widget.id]);
     if (infoList.isEmpty) {
       showToast('获取用户信息错误');
       return;

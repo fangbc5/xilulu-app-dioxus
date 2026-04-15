@@ -4,10 +4,10 @@ import 'package:get/get.dart';
 import 'package:wechat_flutter/pages/contacts/contacts_details_page.dart';
 import 'package:wechat_flutter/pages/contacts/group_launch_page.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class ChatMamBer extends StatefulWidget {
-  final V2TimUserFullInfo? model;
+  final XUserInfo? model;
 
   ChatMamBer({this.model});
 
@@ -49,7 +49,7 @@ class _ChatMamBerState extends State<ChatMamBer> {
               ),
             ),
             onTap: () => Get.to<void>(new ContactsDetailsPage(
-                id: widget.model!.userID!, title: name, avatar: face)),
+                id: widget.model!.userId, title: name, avatar: face)),
           );
         }).toList(),
       ),

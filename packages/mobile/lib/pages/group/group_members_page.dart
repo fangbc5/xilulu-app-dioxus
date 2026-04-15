@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
 import 'package:wechat_flutter/im/fun_dim_group_model.dart';
 import 'package:wechat_flutter/pages/group/select_members_page.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 import '../../im/info_handle.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class GroupMembersPage extends StatefulWidget {
   final String groupId;
@@ -20,10 +19,8 @@ class GroupMembersPage extends StatefulWidget {
 
 class _GroupMembersPageState extends State<GroupMembersPage> {
   late Future<void> _futureBuilderFuture;
-  List<V2TimGroupMemberFullInfo?> memberList = <V2TimGroupMemberFullInfo?>[
-    V2TimGroupMemberFullInfo(userID: '+'),
-    // {'user': '+'},
-//    {'user': '-'}
+  List<XGroupMember?> memberList = <XGroupMember?>[
+    XGroupMember(userId: '+'),
   ];
 
   @override
@@ -35,36 +32,21 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
   Future<void> handle(String? uId) async {
     if (!strNoEmpty(uId)) {
       Get.to<void>(SelectMembersPage());
-//      Get.to<void>(CreateGroupChat(
-//        'invite',
-//        groupId: widget.groupId,
-//        callBack: (data) {
-//          if (data.toString().contains('suc')) {
-//            setState(() {});
-//          }
-//          print('邀请好友进群callback >>>> $data');
-//        },
-//      ));
-//    } else {
-//      Get.to<void>(ConversationDetailPage(
-//        title: uId,
-//        type: 1,
-//      ));
     } else {
       showToast('敬请期待');
     }
   }
 
-  Widget memberItem(V2TimGroupMemberFullInfo? item) {
+  Widget memberItem(XGroupMember? item) {
     if (item == null) {
       return Container();
     }
-    if (item.userID == '+' || item.userID == '-') {
+    if (item.userId == '+' || item.userId == '-') {
       return InkWell(
         child: SizedBox(
           width: (Get.width - 60) / 5,
           child: Image.asset(
-            'assets/images/group/${item.userID}.png',
+            'assets/images/group/${item.userId}.png',
             height: 48.0,
             width: 48.0,
           ),
@@ -73,22 +55,21 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
       );
     }
 
-    return FutureBuilder<List<V2TimUserFullInfo>>(
-      future: getUsersProfile(<String>[item.userID]),
+    return FutureBuilder<List<XUserInfo>>(
+      future: getUsersProfile(<String>[item.userId]),
       builder:
-          (BuildContext context, AsyncSnapshot<List<V2TimUserFullInfo>> snap) {
+          (BuildContext context, AsyncSnapshot<List<XUserInfo>> snap) {
         if (snap.connectionState != ConnectionState.done) {
           return Container();
         }
-        final V2TimUserFullInfo currentUser =
-            List<V2TimUserFullInfo>.from(snap.data!).first;
+        final XUserInfo currentUser =
+            List<XUserInfo>.from(snap.data!).first;
         return SizedBox(
           width: (Get.width - 60) / 5,
           child: TextButton(
-            onPressed: () => handle(currentUser.userID),
+            onPressed: () => handle(currentUser.userId),
             style: const ButtonStyle(
               padding: WidgetStatePropertyAll<EdgeInsets>(EdgeInsets.zero),
-              // highlightColor: Colors.transparent,
             ),
             child: Column(
               children: <Widget>[
@@ -132,13 +113,13 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
   }
 
   Future<void> _gerData() async {
-    final List<V2TimGroupMemberFullInfo?>? result =
+    final List<XGroupMember?> result =
         await DimGroup.getGroupMembersListModelLIST(
       widget.groupId,
     );
 
     setState(() {
-      memberList.insertAll(0, result!.toSet());
+      memberList.insertAll(0, result.toSet());
     });
   }
 

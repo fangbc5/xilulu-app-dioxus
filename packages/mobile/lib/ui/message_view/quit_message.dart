@@ -1,28 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
-
-import 'package:wechat_flutter/provider/global_model.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
-
+/// 退出群聊系统消息
 class QuitMessage extends StatelessWidget {
-  const QuitMessage(this.msg, {super.key});
-
-  final V2TimMessage msg;
+  final XMessage model;
+  const QuitMessage(this.model, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    final globalModel = Provider.of<GlobalModel>(context);
-    final V2TimGroupTipsElem groupTipsElem = msg.groupTipsElem!;
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
       alignment: Alignment.center,
-      margin: const EdgeInsets.symmetric(vertical: 5.0),
-      child: new Text(
-        '${groupTipsElem.opMember.userID == globalModel.account ? '你' : groupTipsElem.opMember.nickName}'
-        ' 退出了群聊',
-        style: const TextStyle(
-            color: Color.fromRGBO(108, 108, 108, 0.8), fontSize: 11),
-      ),
+      child: Text('[系统消息] 有成员退出', style: TextStyle(color: Colors.grey, fontSize: 12)),
     );
   }
 }

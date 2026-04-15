@@ -3,12 +3,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
 import '../../pages/contacts/contacts_details_page.dart';
 import '../../provider/global_model.dart';
 import '../../tools/wechat_flutter.dart';
 import '../view/shake_view.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
 ///封装之后的拍一拍效果[ShakeView]
 class MsgAvatar extends StatefulWidget {
@@ -19,7 +18,7 @@ class MsgAvatar extends StatefulWidget {
   });
 
   final GlobalModel globalModel;
-  final V2TimMessage model;
+  final XMessage model;
 
   @override
   State<MsgAvatar> createState() => _MsgAvatarState();
@@ -66,9 +65,9 @@ class _MsgAvatarState extends State<MsgAvatar> with TickerProviderStateMixin {
           ),
           margin: const EdgeInsets.only(right: 10.0),
           child: ImageView(
-            img: widget.model.userID == widget.globalModel.account
+            img: widget.model.sender == widget.globalModel.account
                 ? widget.globalModel.avatar
-                : widget.model.faceUrl ?? defIcon,
+                : defIcon,
             height: 35,
             width: 35,
             fit: BoxFit.cover,
@@ -80,9 +79,9 @@ class _MsgAvatarState extends State<MsgAvatar> with TickerProviderStateMixin {
       },
       onTap: () {
         Get.to<void>(ContactsDetailsPage(
-          title: widget.model.nickName,
-          avatar: widget.model.faceUrl,
-          id: widget.model.id,
+          title: widget.model.sender,
+          avatar: null,
+          id: widget.model.sender,
         ));
       },
     );

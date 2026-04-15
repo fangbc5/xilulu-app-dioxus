@@ -4,7 +4,7 @@ import 'package:wechat_flutter/im/friend_handle.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 import '../info_handle.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class Contact {
   Contact({
@@ -23,11 +23,11 @@ class Contact {
 class ContactsPageData {
   Future<bool> contactIsNull() async {
     final String? user = await SharedUtil.instance.getString(Keys.account);
-    final List<V2TimFriendInfo> result = await getContactsFriends(user!);
+    final List<XFriendInfo> result = await getContactsFriends(user!);
     return !listNoEmpty(result);
   }
 
-  Future<List<Contact>> getMethod(List<V2TimFriendInfo> result) async {
+  Future<List<Contact>> getMethod(List<XFriendInfo> result) async {
     List<Contact> contacts = <Contact>[];
     String avatar;
     String nickName;
@@ -39,11 +39,11 @@ class ContactsPageData {
     }
     int dLength = result.length;
     for (int i = 0; i < dLength; i++) {
-      V2TimFriendInfo model = result[i];
+      XFriendInfo model = result[i];
       avatar = model.userProfile?.faceUrl ?? defIcon;
-      identifier = model.userID;
-      remark = await getRemarkMethod(model.userID);
-      nickName = model.userProfile?.nickName ?? model.userID;
+      identifier = model.userId;
+      remark = await getRemarkMethod(model.userId);
+      nickName = model.userProfile?.nickName ?? model.userId;
       contacts.insert(
         0,
         Contact(
@@ -59,7 +59,7 @@ class ContactsPageData {
 
   Future<List<Contact>> listFriend() async {
     final String? user = await SharedUtil.instance.getString(Keys.account);
-    final List<V2TimFriendInfo> result = await getContactsFriends(user!);
+    final List<XFriendInfo> result = await getContactsFriends(user!);
     return getMethod(result);
   }
 }

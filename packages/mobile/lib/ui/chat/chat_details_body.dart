@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 
 import 'package:wechat_flutter/ui/massage/wait1.dart';
 import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
 class ChatDetailsBody extends StatelessWidget {
   final ScrollController sC;
-  final List<V2TimMessage> chatData;
+  final List<XMessage> chatData;
 
   const ChatDetailsBody({
     Key? key,
@@ -25,7 +25,7 @@ class ChatDetailsBody extends StatelessWidget {
           padding: EdgeInsets.all(8.0),
           reverse: true,
           itemBuilder: (context, int index) {
-            final V2TimMessage model = chatData[index];
+            final XMessage model = chatData[index];
             return SendMessageView(model);
           },
           itemCount: chatData.length,

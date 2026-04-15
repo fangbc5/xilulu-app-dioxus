@@ -1,26 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-
-
-
-
-import 'package:wechat_flutter/ui/message_view/Img_msg.dart';
-import 'package:wechat_flutter/ui/message_view/join_message.dart';
-import 'package:wechat_flutter/ui/message_view/modify_groupInfo_message.dart';
-import 'package:wechat_flutter/ui/message_view/modify_notification_message.dart';
-import 'package:wechat_flutter/ui/message_view/quit_message.dart';
-import 'package:wechat_flutter/ui/message_view/red_package.dart';
-import 'package:wechat_flutter/ui/message_view/sound_msg.dart';
 import 'package:wechat_flutter/ui/message_view/text_msg.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
-import '../message_view/video_message.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
-
+/// 消息渲染路由器：根据 XMessage.msgType 分发到不同的渲染组件
 class SendMessageView extends StatefulWidget {
   const SendMessageView(this.model, {super.key});
 
-  final V2TimMessage model;
+  final XMessage model;
 
   @override
   State<SendMessageView> createState() => _SendMessageViewState();
@@ -29,40 +17,17 @@ class SendMessageView extends StatefulWidget {
 class _SendMessageViewState extends State<SendMessageView> {
   @override
   Widget build(BuildContext context) {
-    final V2TimMessage msg = widget.model;
-    final int msgType = msg.elemType;
-    final String msgStr = msg.textElem?.text ?? '';
-    if ((msgType == MessageElemType.V2TIM_ELEM_TYPE_TEXT) &&
-        msgStr.contains('测试发送红包消息')) {
-      return RedPackage(widget.model);
-    } else if (msgType == MessageElemType.V2TIM_ELEM_TYPE_TEXT) {
-      return TextMsg(msgStr, widget.model);
-    } else if (msgType == MessageElemType.V2TIM_ELEM_TYPE_IMAGE) {
-      return ImgMsg(widget.model);
-    } else if (msgType == MessageElemType.V2TIM_ELEM_TYPE_SOUND) {
-      return SoundMsg(widget.model);
-    } else if (msgType == MessageElemType.V2TIM_ELEM_TYPE_VIDEO) {
-      return VideoMessage(msg);
-    } else if (msgType == MessageElemType.V2TIM_ELEM_TYPE_GROUP_TIPS) {
-      final V2TimGroupTipsElem groupTipsElem = msg.groupTipsElem!;
-      if (groupTipsElem.type ==
-              GroupTipsElemType.V2TIM_GROUP_TIPS_TYPE_INVITE ||
-          groupTipsElem.type == GroupTipsElemType.V2TIM_GROUP_TIPS_TYPE_JOIN) {
-        return JoinMessage(msg);
-      } else if (groupTipsElem.type ==
-          GroupTipsElemType.V2TIM_GROUP_TIPS_TYPE_QUIT) {
-        return QuitMessage(msg);
-      } else if (groupTipsElem.type ==
-          GroupTipsElemType.V2TIM_GROUP_TIPS_TYPE_GROUP_INFO_CHANGE) {
-        return ModifyNotificationMessage(msg);
-      } else if (groupTipsElem.type ==
-          GroupTipsElemType.V2TIM_GROUP_TIPS_TYPE_MEMBER_INFO_CHANGE) {
-        return ModifyGroupInfoMessage(msg);
-      }
-    } else if (msgType == MessageElemType.V2TIM_ELEM_TYPE_CUSTOM) {
-      final V2TimCustomElem customElem = msg.customElem!;
-      return TextMsg('自定义消息：${customElem.data}', widget.model);
+    final XMessage msg = widget.model;
+
+    // 当前阶段只实现文本消息渲染，后续逐步添加图片、语音、视频等
+    switch (msg.msgType) {
+      case 0: // 文本消息
+        return TextMsg(msg.content, widget.model);
+      // TODO: case 1 图片消息
+      // TODO: case 2 语音消息
+      // TODO: case 3 视频消息
+      default:
+        return TextMsg(msg.content.isEmpty ? '未知消息类型' : msg.content, widget.model);
     }
-    return const Text('未知消息');
   }
 }

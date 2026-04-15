@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-
 import 'package:wechat_flutter/im/conversation_handle.dart';
 import 'package:wechat_flutter/im/model/chat_list.dart';
 import 'package:wechat_flutter/pages/chat/chat_page.dart';
@@ -12,7 +11,7 @@ import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 import 'package:wechat_flutter/ui/view/pop_view.dart';
 
 import '../../tools/event/im_event.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -21,7 +20,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
-  List<V2TimConversation?> _chatData = [];
+  List<XConversation?> _chatData = [];
 
   Offset? tapPos;
   TextSpanBuilder _builder = TextSpanBuilder();
@@ -35,7 +34,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> getChatData() async {
-    final List<V2TimConversation?> listChat =
+    final List<XConversation?> listChat =
         await ChatListData().chatListData();
     if (!listNoEmpty(listChat)) {
       return;
@@ -59,7 +58,6 @@ class _HomePageState extends State<HomePage>
           const MyPopupMenuItem(value: '标为已读', child: Text('标为已读')),
           const MyPopupMenuItem(value: '置顶聊天', child: Text('置顶聊天')),
           const MyPopupMenuItem(value: '删除该聊天', child: Text('删除该聊天')),
-          // ignore: missing_return
         ]).then<void>((String? selected) async {
       switch (selected) {
         case '删除该聊天':
@@ -131,7 +129,7 @@ class _HomePageState extends State<HomePage>
         behavior: MyBehavior(),
         child: ListView.builder(
           itemBuilder: (BuildContext context, int index) {
-            final V2TimConversation? model = _chatData[index];
+            final XConversation? model = _chatData[index];
             if (model == null) {
               return Container();
             }
@@ -139,9 +137,9 @@ class _HomePageState extends State<HomePage>
             return InkWell(
               onTap: () {
                 Get.to<void>(ChatPage(
-                    id: model.userID ?? model.groupID!,
-                    title: model.showName ?? model.conversationID!,
-                    type: model.type!));
+                    id: model.peerId ?? model.conversationId,
+                    title: model.showName ?? model.conversationId,
+                    type: model.type));
               },
               onTapDown: (TapDownDetails details) {
                 tapPos = details.globalPosition;
@@ -150,14 +148,14 @@ class _HomePageState extends State<HomePage>
                 _showMenu(
                   context,
                   tapPos!,
-                  model.type == ConversationType.V2TIM_GROUP ? 2 : 1,
-                  model.conversationID!,
+                  model.type == ConversationType.group ? 2 : 1,
+                  model.conversationId,
                 );
               },
               child: MyConversationView(
                 imageUrl: model.faceUrl,
                 title: model.showName ?? '',
-                content: model.lastMessage,
+                content: model.lastMessage?.content,
                 time: timeView(model.lastMessage?.timestamp ?? 0),
                 isBorder: model.showName != _chatData[0]?.showName,
               ),

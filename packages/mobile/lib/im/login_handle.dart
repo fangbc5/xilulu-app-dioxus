@@ -32,11 +32,26 @@ class ImLoginManager {
 
         await rust_api.coreStartWs(url: wsUrl, token: smuggledTokenPayload, clientId: clientId);
         
-        // 绑定消息事件流
+        // 绑定消息事件流 (现在从 Rust 传过来的是 JSON 字符串)
         final stream = await rust_api.coreSubscribeImEvents();
-        stream.listen((event) {
-          print("收到远端 WS 消息事件: $event");
-          // TODO: 下一步将 XEvent 转换为本地 Provider 广播
+        stream.listen((eventStr) {
+          debugPrint("收到远端 WS 消息事件(JSON): $eventStr");
+          try {
+            final Map<String, dynamic> eventJson = jsonDecode(eventStr);
+            // 假设序列化后是 {"OnNewMessageReceived": { ...xmsg... }}
+            if (eventJson.containsKey('OnNewMessageReceived')) {
+              final msgMap = eventJson['OnNewMessageReceived'];
+              final String roomId = msgMap['room_id']?.toString() ?? '';
+              
+              if (roomId.isNotEmpty) {
+                // 通知 Flutter 更新对应聊天视框
+                eventBusNewMsg.value = EventBusNewMsg(roomId);
+                Notice.send(WeChatActions.msg(), '');
+              }
+            }
+          } catch (e) {
+            debugPrint("解析 WS 事件失败: $e");
+          }
         });
         print("WebSocket 已成功连接并挂载事件流");
       } else {

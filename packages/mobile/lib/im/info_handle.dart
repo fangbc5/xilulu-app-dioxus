@@ -1,68 +1,41 @@
+/// 用户信息管理 - 自研 SDK 实现
+/// TODO: 后续对接 Rust FFI 的用户信息接口
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-
-
-
 import 'package:wechat_flutter/provider/global_model.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
+/// 获取备注
 Future<String?> getRemarkMethod(String id) async {
-  // try {
-  //   var result = await im.getRemark(id);
-  //   callback(result);
-  //   return result;
-  // } on PlatformException {
-  //   print('获取备注失败');
-  // } on MissingPluginException {
-  //   print('插件内这个功能IOS版还在开发中');
-  // }
+  // TODO: 从 Rust SDK 获取用户备注
   return "";
 }
 
+/// 设置用户资料
+/// TODO: 对接 Rust SDK 更新用户资料
 Future<bool> setUsersProfileMethod(
   BuildContext context, {
   String nickNameStr = '',
   String avatarStr = '',
 }) async {
   final model = Provider.of<GlobalModel>(context, listen: false);
-  final String? currentUser = (await V2TIMManager().getLoginUser()).data;
-  if (!strNoEmpty(currentUser)) {
-    log('error: Current user is empty');
-    return false;
-  }
-  final V2TimUserFullInfo? v2timUserFullInfo =
-      (await V2TIMManager().getUsersInfo(userIDList: [currentUser!]))
-          .data
-          ?.first;
-  if (v2timUserFullInfo == null) {
-    log('error: Current user info is empty');
-    return false;
-  }
   if (nickNameStr.isNotEmpty) {
-    v2timUserFullInfo.nickName = nickNameStr;
+    model.nickName = nickNameStr;
   }
   if (avatarStr.isNotEmpty) {
-    v2timUserFullInfo.faceUrl = avatarStr;
+    model.avatar = avatarStr;
   }
-  final V2TimCallback value =
-      await V2TIMManager().setSelfInfo(userFullInfo: v2timUserFullInfo);
-  if (value.code == 0) {
-    if (strNoEmpty(nickNameStr)) {
-      model.nickName = nickNameStr;
-    }
-    if (strNoEmpty(avatarStr)) {
-      model.avatar = avatarStr;
-    }
-  }
-  return value.code == 0;
+  // TODO: 调用 Rust FFI 更新用户资料到服务端
+  return true;
 }
 
-Future<List<V2TimUserFullInfo>> getUsersProfile(List<String> users) async {
-  final V2TimValueCallback<List<V2TimUserFullInfo>> call =
-      await V2TIMManager().getUsersInfo(userIDList: users);
-  return call.data ?? [];
+/// 获取用户资料列表
+/// TODO: 对接 Rust SDK 批量获取用户资料
+Future<List<XUserInfo>> getUsersProfile(List<String> users) async {
+  // 暂时返回空列表
+  return [];
 }

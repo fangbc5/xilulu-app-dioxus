@@ -5,13 +5,13 @@ import 'package:wechat_flutter/ui/message_view/msg_avatar.dart';
 import 'package:wechat_flutter/ui/message_view/text_item_container.dart';
 
 import '../../provider/global_model.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
 class TextMsg extends StatelessWidget {
   const TextMsg(this.text, this.model, {super.key});
 
   final String text;
-  final V2TimMessage model;
+  final XMessage model;
 
   @override
   Widget build(BuildContext context) {

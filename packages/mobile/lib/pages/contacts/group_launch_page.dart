@@ -10,7 +10,7 @@ import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/item/contact_item.dart';
 import 'package:wechat_flutter/ui/item/contact_view.dart';
 import 'package:wechat_flutter/ui/item/launch_group.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class GroupLaunchPage extends StatefulWidget {
   @override
@@ -91,13 +91,13 @@ class _GroupLaunchPageState extends State<GroupLaunchPage> {
 
   // 搜索好友
   Future<void> search(String userName) async {
-    final List<V2TimUserFullInfo> data =
+    final List<XUserInfo> data =
         await getUsersProfile(<String>[userName]);
-    if (data[0].allowType != null) {
+    if (data[0] != null) {
       Get.to<void>(
         AddFriendsDetails(
           'search',
-          data[0].userID!,
+          data[0].userId!,
           data[0].faceUrl ?? '',
           data[0].nickName ?? '',
           data[0].gender ?? 0,

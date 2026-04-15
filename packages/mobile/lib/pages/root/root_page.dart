@@ -11,7 +11,7 @@ import 'package:wechat_flutter/pages/home/home_page.dart';
 import 'package:wechat_flutter/pages/mine/mine_page.dart';
 import 'package:wechat_flutter/pages/root/root_tabbar.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+
 import 'package:wechat_flutter/im/login_handle.dart';
 
 class RootPage extends StatefulWidget {
@@ -40,8 +40,7 @@ class _RootPageState extends State<RootPage> {
           .listen((List<ConnectivityResult> result) async {
         if (result.contains(ConnectivityResult.mobile) ||
             result.contains(ConnectivityResult.wifi)) {
-          V2TimValueCallback<String> currentUser =
-              await V2TIMManager().getLoginUser();
+          final currentUser = await SharedUtil.instance.getString(Keys.account);
           log('ConnectivityResult::currentUser::$currentUser');
           // if (currentUser == '' ) {
           // final account = await SharedUtil.instance.getString(Keys.account);

@@ -12,7 +12,7 @@ import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/view/list_tile_view.dart';
 import 'package:wechat_flutter/ui/view/search_main_view.dart';
 import 'package:wechat_flutter/ui/view/search_tile_view.dart';
-import 'package:wechat_flutter/im/tencent_mocks.dart';
+import 'package:wechat_flutter/im/model/im_models.dart';
 
 class AddFriendPage extends StatefulWidget {
   @override
@@ -174,17 +174,17 @@ class _AddFriendPageState extends State<AddFriendPage> {
 
   // 搜索好友
   Future search(String userName) async {
-    final List<V2TimUserFullInfo> data = await getUsersProfile([userName]);
+    final List<XUserInfo> data = await getUsersProfile([userName]);
     if (data.isEmpty) {
       showToast('该用户不存在【可搜"188"或"18888"试试】');
       return;
     }
     setState(() {
       if (Platform.isIOS) {
-        V2TimUserFullInfo model = data[0];
-        if (model.allowType != null) {
-          Get.to<void>(new AddFriendsDetails('search', model.userID!,
-              model.faceUrl!, model.nickName!, model.gender!));
+        XUserInfo model = data[0];
+        if (model.nickName != null) {
+          Get.to<void>(new AddFriendsDetails('search', model.userId,
+              model.faceUrl ?? '', model.nickName ?? '', model.gender ?? 0));
         } else {
           isResult = true;
         }
