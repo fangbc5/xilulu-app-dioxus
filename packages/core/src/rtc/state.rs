@@ -21,13 +21,13 @@ pub enum CallMode {
 pub struct CallState {
     pub status: CallStatus,
     pub mode: CallMode,
-    pub room_id: u64,
-    pub remote_uid: u64,
+    pub room_id: i64,
+    pub remote_uid: i64,
     pub is_video: bool,
     pub is_muted: bool,
     pub is_camera_off: bool,
     pub is_speaker_on: bool,
-    pub call_start_time: u64,
+    pub call_start_time: i64,
     pub livekit_token: Option<String>,
     pub livekit_url: Option<String>,
 }

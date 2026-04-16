@@ -11,7 +11,7 @@ use super::state::{CallState, CallStatus, CallMode};
 /// Event sent to the UI/Flutter layer when RTC operations need physical handling.
 #[derive(Debug, Clone)]
 pub enum RtcEvent {
-    IncomingCall { caller_uid: u64, is_video: bool },
+    IncomingCall { caller_uid: i64, is_video: bool },
     CallAccepted { token: String, url: String },
     CallRejected,
     CallTimeout,
@@ -59,7 +59,7 @@ impl CallManager {
         self.state.lock().await.clone()
     }
 
-    pub async fn initiate_call(&self, target_uid: u64, room_id: u64, mode: CallMode) -> Result<(), String> {
+    pub async fn initiate_call(&self, target_uid: i64, room_id: i64, mode: CallMode) -> Result<(), String> {
         let mut s = self.state.lock().await;
         if s.status != CallStatus::Idle {
             return Err("Call already in progress".to_string());
@@ -79,7 +79,7 @@ impl CallManager {
 
         self.ws_client
             .send_json(json!({
-                "type": CallMsgType::VideoCallRequest as u8,
+                "type": CallMsgType::VideoCallRequest as i32,
                 "data": req,
             }))
             .await?;
@@ -102,7 +102,7 @@ impl CallManager {
 
         self.ws_client
             .send_json(json!({
-                "type": CallMsgType::CallAccepted as u8,
+                "type": CallMsgType::CallAccepted as i32,
                 "data": resp,
             }))
             .await?;
@@ -123,7 +123,7 @@ impl CallManager {
 
         self.ws_client
             .send_json(json!({
-                "type": CallMsgType::CallRejected as u8,
+                "type": CallMsgType::CallRejected as i32,
                 "data": resp,
             }))
             .await?;
@@ -141,7 +141,7 @@ impl CallManager {
         let data = CallRoomIdData { room_id: s.room_id };
         self.ws_client
             .send_json(json!({
-                "type": CallMsgType::Cancel as u8,
+                "type": CallMsgType::Cancel as i32,
                 "data": data,
             }))
             .await?;
@@ -156,7 +156,7 @@ impl CallManager {
         
         self.ws_client
             .send_json(json!({
-                "type": CallMsgType::Dropped as u8,
+                "type": CallMsgType::Dropped as i32,
                 "data": data,
             }))
             .await?;
@@ -188,7 +188,7 @@ impl CallManager {
                             accepted: 0,
                         };
                         let _ = ws_client.send_json(json!({
-                            "type": CallMsgType::CallRejected as u8,
+                            "type": CallMsgType::CallRejected as i32,
                             "data": resp,
                         })).await;
                         return;

@@ -28,16 +28,16 @@ class XConversation {
   factory XConversation.fromJson(Map<String, dynamic> json) {
     return XConversation(
       conversationId: json['conversation_id']?.toString() ?? '',
-      type: json['type'] ?? 1,
+      type: json['type'] as int? ?? 1,
       peerId: json['peer_id']?.toString(),
       showName: json['show_name']?.toString(),
       faceUrl: json['face_url']?.toString(),
-      unreadCount: json['unread_count'] ?? 0,
+      unreadCount: json['unread_count'] as int? ?? 0,
       lastMessage: json['last_message'] != null
-          ? XMessage.fromJson(json['last_message'])
+          ? XMessage.fromJson(json['last_message'] as Map<String, dynamic>)
           : null,
       draftText: json['draft_text']?.toString(),
-      isPinned: json['is_pinned'] ?? false,
+      isPinned: json['is_pinned'] as bool? ?? false,
     );
   }
 }
@@ -64,7 +64,7 @@ class XUserInfo {
       nickName: json['nick_name']?.toString(),
       faceUrl: json['face_url']?.toString(),
       selfSignature: json['self_signature']?.toString(),
-      gender: json['gender'],
+      gender: json['gender'] as int?,
     );
   }
 }
@@ -89,7 +89,7 @@ class XFriendInfo {
       friendRemark: json['friend_remark']?.toString(),
       friendAddSource: json['friend_add_source']?.toString(),
       userProfile: json['user_profile'] != null
-          ? XUserInfo.fromJson(json['user_profile'])
+          ? XUserInfo.fromJson(json['user_profile'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -134,7 +134,7 @@ class XGroupInfo {
 
   factory XGroupInfo.fromJson(Map<String, dynamic> json) {
     return XGroupInfo(
-      memberCount: json['member_count'],
+      memberCount: json['member_count'] as int?,
       owner: json['owner']?.toString(),
       introduction: json['introduction']?.toString(),
       groupName: json['group_name']?.toString(),

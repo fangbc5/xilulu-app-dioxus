@@ -15,7 +15,9 @@ class MinePage extends StatefulWidget {
   _MinePageState createState() => new _MinePageState();
 }
 
-class _MinePageState extends State<MinePage> {
+class _MinePageState extends State<MinePage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   void action(name) {
     switch (name) {
       case '设置':
@@ -181,6 +183,7 @@ class _MinePageState extends State<MinePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final model = Provider.of<GlobalModel>(context);
 
     return new Container(

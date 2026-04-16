@@ -39,12 +39,12 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
       }
       
       // 解析出来的 JSON
-      final Map<String, dynamic> data = json.decode(resp);
+      final Map<String, dynamic> data = json.decode(resp) as Map<String, dynamic>;
       if (data.containsKey('access_token')) {
-        await SharedUtil.instance.saveString('access_token', data['access_token']);
+        await SharedUtil.instance.saveString('access_token', data['access_token'] as String);
       }
       if (data.containsKey('refresh_token')) {
-        await SharedUtil.instance.saveString('refresh_token', data['refresh_token']);
+        await SharedUtil.instance.saveString('refresh_token', data['refresh_token'] as String);
       }
       
       await ImLoginManager.login(widget.mobile, context);

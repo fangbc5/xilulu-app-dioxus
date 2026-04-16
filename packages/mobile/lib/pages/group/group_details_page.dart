@@ -47,7 +47,7 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
   bool isGroupOwner = false;
 
   List<XGroupMember?> memberList = <XGroupMember?>[
-    XGroupMember(userID: '+'),
+    XGroupMember(userId: '+'),
   ];
   XGroupInfo? dataGroup;
 

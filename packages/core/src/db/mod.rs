@@ -52,7 +52,88 @@ impl DbManager {
                 unread_count INTEGER NOT NULL DEFAULT 0,
                 last_msg_id TEXT,
                 draft_text TEXT,
+                active_time INTEGER,
+                is_mute INTEGER NOT NULL DEFAULT 0,
+                is_top INTEGER NOT NULL DEFAULT 0,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
+                friend_uid INTEGER,
+                read_msg_id INTEGER,
+                clear_msg_id INTEGER,
                 updated_at INTEGER NOT NULL
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Table: friends
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS friends (
+                uid INTEGER PRIMARY KEY,
+                remark TEXT,
+                status INTEGER NOT NULL DEFAULT 1, -- 1: Normal, 2: Deleted
+                updated_at INTEGER NOT NULL
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Table: groups
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS groups (
+                group_id INTEGER PRIMARY KEY,
+                room_id INTEGER NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                avatar TEXT,
+                notice TEXT,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
+                owner_uid INTEGER,
+                updated_at INTEGER NOT NULL
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Table: group_members
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS group_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                uid INTEGER NOT NULL,
+                role INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(group_id, uid)
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Table: user_profiles
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                uid INTEGER PRIMARY KEY,
+                nick_name TEXT NOT NULL,
+                avatar TEXT,
+                updated_at INTEGER NOT NULL
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Table: sync_cursors
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS sync_cursors (
+                module TEXT PRIMARY KEY,
+                timestamp_ms INTEGER NOT NULL
             );
             "#,
         )

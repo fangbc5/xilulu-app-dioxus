@@ -31,14 +31,14 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
       final respJson = await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: null);
       
       // 解析 FFI 返回的附带用户身份信息的 JSON
-      final Map<String, dynamic> data = json.decode(respJson);
+      final Map<String, dynamic> data = json.decode(respJson) as Map<String, dynamic>;
       
       await SharedUtil.instance.saveString(Keys.account, _accountC.text);
       if (data.containsKey('access_token')) {
-        await SharedUtil.instance.saveString('access_token', data['access_token']);
+        await SharedUtil.instance.saveString('access_token', data['access_token'] as String);
       }
       if (data.containsKey('refresh_token')) {
-        await SharedUtil.instance.saveString('refresh_token', data['refresh_token']);
+        await SharedUtil.instance.saveString('refresh_token', data['refresh_token'] as String);
       }
       
       await ImLoginManager.login(_accountC.text, context);

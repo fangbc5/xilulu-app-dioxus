@@ -38,13 +38,7 @@ class ChatDetailsRowState extends State<ChatDetailsRow> {
       }
       if (!v) return;
       if (!strNoEmpty(path)) return;
-      sendSoundMessages(
-        widget.id,
-        path!,
-        2,
-        widget.type,
-        (value) => Notice.send(WeChatActions.msg(), v ?? ''),
-      );
+      debugPrint("Mock sendSoundMessages: path=$path, targetId=${widget.id}");
     });
   }
 

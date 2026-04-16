@@ -43,7 +43,7 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
 
   late RenderBox button;
   late RenderBox overlay;
-  late RelativeRect position;
+  RelativeRect? position;
 
   @override
   void initState() {
@@ -64,6 +64,9 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (position == null) {
+      return const SizedBox.shrink();
+    }
     return MediaQuery.removePadding(
       context: context,
       removeTop: true,
@@ -73,7 +76,7 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
       child: Builder(builder: (BuildContext context) {
         return CustomSingleChildLayout(
           delegate: PopupMenuRouteLayout(
-            position,
+            position!,
             null,
             Directionality.of(widget.btnContext),
             widget.width,
@@ -96,7 +99,7 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
             size: Size(width, _triangleHeight),
             painter: TrianglePainter(
               color: itemBgColor,
-              position: position,
+              position: position!,
               isInverted: true,
               size: button.size,
               screenWidth: MediaQuery.of(context).size.width,
@@ -143,14 +146,14 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
   Widget itemBuild(Map<String, String> item) {
     var row = [
       Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10.0),
-        child: item['icon'] != null
-            ? Image.asset(item['icon']!)
-            : Icon(Icons.phone, color: Colors.white),
+        padding: EdgeInsets.only(left: 14.0, right: 3.0),
+        child: item['icon'] != null && item['icon']!.isNotEmpty
+            ? Image.asset(item['icon']!, width: 26.0, height: 26.0, fit: BoxFit.contain, color: Colors.white)
+            : SizedBox(width: 26.0, child: Icon(Icons.help_outline, color: Colors.white, size: 26.0)),
       ),
       Expanded(
         child: Container(
-          height: 50,
+          height: 52, // Exact WeChat popup height
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(
             border: item['title'] == widget.actions[0]['title']
@@ -164,13 +167,13 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
           ),
           child: Text(
             item['title']!,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.w400),
           ),
         ),
       ),
     ];
-    return TextButton(
-      onPressed: () {
+    return InkWell(
+      onTap: () {
         isShow = false;
         setState(() {});
         Navigator.of(context).pop(item['title']);
@@ -179,7 +182,6 @@ class _MenuPopWidgetState extends State<MenuPopWidget> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(5)),
         ),
-        padding: EdgeInsets.only(left: 10.0),
         child: Row(children: row),
       ),
     );

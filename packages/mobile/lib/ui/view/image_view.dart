@@ -19,31 +19,8 @@ class ImageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget image;
-    if (GetUtils.isURL(img)) {
-      image = CachedNetworkImage(
-        imageUrl: img,
-        width: width,
-        height: height,
-        fit: fit,
-        cacheManager: cacheManager,
-      );
-    } else if (File(img).existsSync()) {
-      image = Image.file(
-        File(img),
-        width: width,
-        height: height,
-        fit: fit,
-      );
-    } else if (img.startsWith('assets/')) {
-      image = Image.asset(
-        img,
-        width: width,
-        height: height,
-        fit: width != null && height != null ? BoxFit.fill : fit,
-      );
-    } else {
-      image = Container(
+    Widget _buildDefIcon() {
+      return Container(
         decoration: BoxDecoration(
           color: Colors.black26.withOpacity(0.1),
           border: Border.all(color: Colors.black.withOpacity(0.2), width: 0.3),
@@ -55,6 +32,36 @@ class ImageView extends StatelessWidget {
           fit: width != null && height != null ? BoxFit.fill : fit,
         ),
       );
+    }
+
+    Widget image;
+    if (img.startsWith('assets/')) {
+      image = Image.asset(
+        img,
+        width: width,
+        height: height,
+        fit: width != null && height != null ? BoxFit.fill : fit,
+      );
+    } else if (img.startsWith('http://') || img.startsWith('https://')) {
+      image = CachedNetworkImage(
+        imageUrl: img,
+        width: width,
+        height: height,
+        fit: fit,
+        cacheManager: cacheManager,
+        memCacheWidth: width != null ? (width! * 3).toInt() : null,
+        memCacheHeight: height != null ? (height! * 3).toInt() : null,
+      );
+    } else if (img.startsWith('/') || img.startsWith('file://') || img.startsWith(r'C:\')) {
+      image = Image.file(
+        File(img),
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _buildDefIcon(),
+      );
+    } else {
+      image = _buildDefIcon();
     }
     if (isRadius) {
       return ClipRRect(

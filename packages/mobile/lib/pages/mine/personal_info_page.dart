@@ -116,12 +116,12 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
   Widget buildContent(Map<String, dynamic> item, GlobalModel model) {
     bool isGap = item['gap'] == true;
-    bool isLine = item['isLine'] ?? true;
-    String label = item['label'];
+    bool isLine = (item['isLine'] as bool?) ?? true;
+    String label = item['label'] as String;
 
     return new LabelRow(
       label: label,
-      rValue: item['value'],
+      rValue: item['value'] as String?,
       isLine: isLine,
       isRight: true,
       isTopAlign: label == '签名', // Ensure long multiline text aligns its Top label with the text block

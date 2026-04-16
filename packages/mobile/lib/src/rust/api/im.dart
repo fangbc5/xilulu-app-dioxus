@@ -3,9 +3,8 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-
 import '../frb_generated.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `FLUTTER_STREAM`, `GLOBAL_DB`, `GLOBAL_WS_CLIENT`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `deref`, `deref`, `deref`, `initialize`, `initialize`, `initialize`
@@ -20,15 +19,140 @@ Future<void> coreStartWs(
     RustLib.instance.api
         .crateApiImCoreStartWs(url: url, token: token, clientId: clientId);
 
-Stream<XEvent> coreSubscribeImEvents() =>
+Stream<String> coreSubscribeImEvents() =>
     RustLib.instance.api.crateApiImCoreSubscribeImEvents();
 
 Future<String> coreSendTextMessage(
-        {required BigInt roomId,
+        {required PlatformInt64 roomId,
         required String content,
-        required BigInt senderUid}) =>
+        required PlatformInt64 senderUid}) =>
     RustLib.instance.api.crateApiImCoreSendTextMessage(
         roomId: roomId, content: content, senderUid: senderUid);
 
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<XEvent>>
-abstract class XEvent implements RustOpaqueInterface {}
+/// 从本地 SQLite 获取历史消息，返回 JSON 数组字符串
+Future<String> coreGetHistoryMessages(
+        {required PlatformInt64 roomId, required PlatformInt64 limit}) =>
+    RustLib.instance.api
+        .crateApiImCoreGetHistoryMessages(roomId: roomId, limit: limit);
+
+/// 获取会话列表，返回 JSON 数组字符串
+Future<String> coreGetContacts() =>
+    RustLib.instance.api.crateApiImCoreGetContacts();
+
+/// 删除会话
+Future<void> coreDeleteContact({required PlatformInt64 roomId}) =>
+    RustLib.instance.api.crateApiImCoreDeleteContact(roomId: roomId);
+
+/// 标记会话已读
+Future<void> coreMarkRead({required PlatformInt64 roomId}) =>
+    RustLib.instance.api.crateApiImCoreMarkRead(roomId: roomId);
+
+/// 从远端拉取历史消息，返回 JSON 数组字符串
+Future<String> corePullRemoteMessages(
+        {required PlatformInt64 roomId,
+        PlatformInt64? cursor,
+        required PlatformInt64 limit}) =>
+    RustLib.instance.api.crateApiImCorePullRemoteMessages(
+        roomId: roomId, cursor: cursor, limit: limit);
+
+/// 获取好友列表，返回 JSON 数组字符串（走本地 SQLite）
+Future<String> coreListFriends() =>
+    RustLib.instance.api.crateApiImCoreListFriends();
+
+/// 搜索用户，返回 JSON 数组字符串
+Future<String> coreSearchUser({required String keyword}) =>
+    RustLib.instance.api.crateApiImCoreSearchUser(keyword: keyword);
+
+/// 添加好友（发送好友申请）
+Future<void> coreAddFriend(
+        {required PlatformInt64 targetUid, String? message}) =>
+    RustLib.instance.api
+        .crateApiImCoreAddFriend(targetUid: targetUid, message: message);
+
+/// 删除好友
+Future<void> coreDeleteFriend({required PlatformInt64 targetUid}) =>
+    RustLib.instance.api.crateApiImCoreDeleteFriend(targetUid: targetUid);
+
+/// 获取好友申请列表，返回 JSON 数组字符串
+Future<String> coreListFriendApplies() =>
+    RustLib.instance.api.crateApiImCoreListFriendApplies();
+
+/// 同意好友申请
+Future<void> coreApproveFriendApply({required PlatformInt64 applyId}) =>
+    RustLib.instance.api.crateApiImCoreApproveFriendApply(applyId: applyId);
+
+/// 拒绝好友申请
+Future<void> coreRejectFriendApply({required PlatformInt64 applyId}) =>
+    RustLib.instance.api.crateApiImCoreRejectFriendApply(applyId: applyId);
+
+/// 获取用户信息，返回 JSON 字符串
+Future<String> coreGetUserInfo({required PlatformInt64 userId}) =>
+    RustLib.instance.api.crateApiImCoreGetUserInfo(userId: userId);
+
+/// 更新用户信息，返回更新后的用户信息 JSON 字符串
+Future<String> coreUpdateUserInfo(
+        {required PlatformInt64 userId,
+        String? nickName,
+        String? faceUrl,
+        String? selfSignature,
+        int? gender}) =>
+    RustLib.instance.api.crateApiImCoreUpdateUserInfo(
+        userId: userId,
+        nickName: nickName,
+        faceUrl: faceUrl,
+        selfSignature: selfSignature,
+        gender: gender);
+
+/// 批量获取用户信息，返回 JSON 数组字符串
+Future<String> coreGetUsersInfo({required Int64List userIds}) =>
+    RustLib.instance.api.crateApiImCoreGetUsersInfo(userIds: userIds);
+
+/// 创建群组，返回群组信息 JSON 字符串
+Future<String> coreCreateGroup(
+        {required String name,
+        required Int64List memberUids,
+        String? introduction}) =>
+    RustLib.instance.api.crateApiImCoreCreateGroup(
+        name: name, memberUids: memberUids, introduction: introduction);
+
+/// 获取群组信息，返回 JSON 字符串（走本地 SQLite）
+Future<String> coreGetGroupInfo({required PlatformInt64 groupId}) =>
+    RustLib.instance.api.crateApiImCoreGetGroupInfo(groupId: groupId);
+
+/// 获取群成员列表，返回 JSON 数组字符串（走本地 SQLite）
+Future<String> coreListGroupMembers({required PlatformInt64 groupId}) =>
+    RustLib.instance.api.crateApiImCoreListGroupMembers(groupId: groupId);
+
+/// 退出群组
+Future<void> coreQuitGroup({required PlatformInt64 groupId}) =>
+    RustLib.instance.api.crateApiImCoreQuitGroup(groupId: groupId);
+
+/// 邀请成员加入群组
+Future<void> coreInviteMembers(
+        {required PlatformInt64 groupId, required Int64List memberUids}) =>
+    RustLib.instance.api
+        .crateApiImCoreInviteMembers(groupId: groupId, memberUids: memberUids);
+
+/// 踢出群成员
+Future<void> coreKickMember(
+        {required PlatformInt64 groupId, required PlatformInt64 userId}) =>
+    RustLib.instance.api
+        .crateApiImCoreKickMember(groupId: groupId, userId: userId);
+
+/// 更新群组信息，返回更新后的群组信息 JSON 字符串
+Future<String> coreUpdateGroupInfo(
+        {required PlatformInt64 groupId,
+        String? name,
+        String? faceUrl,
+        String? introduction,
+        String? notification}) =>
+    RustLib.instance.api.crateApiImCoreUpdateGroupInfo(
+        groupId: groupId,
+        name: name,
+        faceUrl: faceUrl,
+        introduction: introduction,
+        notification: notification);
+
+/// 解散群组
+Future<void> coreDismissGroup({required PlatformInt64 groupId}) =>
+    RustLib.instance.api.crateApiImCoreDismissGroup(groupId: groupId);

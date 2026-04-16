@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/pages/login/login_begin_page.dart';
 import 'package:wechat_flutter/src/rust/api/im.dart' as rust_api;
+import 'package:wechat_flutter/tools/event/im_event.dart';
 
 class ImLoginManager {
   static const int expireTime = 604800;
@@ -37,7 +38,7 @@ class ImLoginManager {
         stream.listen((eventStr) {
           debugPrint("收到远端 WS 消息事件(JSON): $eventStr");
           try {
-            final Map<String, dynamic> eventJson = jsonDecode(eventStr);
+            final Map<String, dynamic> eventJson = jsonDecode(eventStr) as Map<String, dynamic>;
             // 假设序列化后是 {"OnNewMessageReceived": { ...xmsg... }}
             if (eventJson.containsKey('OnNewMessageReceived')) {
               final msgMap = eventJson['OnNewMessageReceived'];

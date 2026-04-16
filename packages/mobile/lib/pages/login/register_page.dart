@@ -300,8 +300,8 @@ class _RegisterPageState extends State<RegisterPage> {
                    filename: filename,
                    scene: 'avatar'
                 );
-                final meta = jsonDecode(resJson);
-                avatarKey = meta['file_key'];
+                final meta = jsonDecode(resJson) as Map<String, dynamic>;
+                avatarKey = meta['file_key'] as String?;
               } catch (ae) {
                 showToast('头像上传失败: $ae');
                 return;

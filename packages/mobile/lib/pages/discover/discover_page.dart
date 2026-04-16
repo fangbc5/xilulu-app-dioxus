@@ -14,7 +14,9 @@ class DiscoverPage extends StatefulWidget {
   State<DiscoverPage> createState() => _DiscoverPageState();
 }
 
-class _DiscoverPageState extends State<DiscoverPage> {
+class _DiscoverPageState extends State<DiscoverPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   Widget buildContent(Map<String, String> item) {
     bool isShow() {
       if (item['name'] == '朋友圈' ||
@@ -51,6 +53,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final List<Map<String, String>> data = [
       {'icon': 'assets/images/discover/ff_Icon_album.webp', 'name': '朋友圈'},
       {'icon': 'assets/images/discover/ff_Icon_qr_code.webp', 'name': '扫一扫'},

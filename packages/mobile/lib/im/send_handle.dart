@@ -18,14 +18,14 @@ Future<void> sendTextMsg(String targetId, int type, String context, {CallbackMsg
 
     // 调用自研 Rust SDK 发送消息
     final rustResponseJson = await coreSendTextMessage(
-        roomId: BigInt.from(parsedRoomId),
+        roomId: parsedRoomId,
         content: context,
-        senderUid: BigInt.from(senderUid));
+        senderUid: senderUid);
 
     debugPrint('Rust FFI 消息发送完成: $rustResponseJson');
 
     if (call != null) {
-      final Map<String, dynamic> json = jsonDecode(rustResponseJson);
+      final Map<String, dynamic> json = jsonDecode(rustResponseJson) as Map<String, dynamic>;
       final xmsg = XMessage.fromJson(json);
       call(xmsg);
     }
@@ -36,4 +36,9 @@ Future<void> sendTextMsg(String targetId, int type, String context, {CallbackMsg
     debugPrint('发送消息失败, $s');
     showToast('发送消息失败: $e');
   }
+}
+
+Future<void> sendImageMsg(String targetId, int type, {required dynamic file, CallbackMsg? callback, dynamic source}) async {
+  debugPrint('Mock sendImageMsg called');
+  showToast('图片发送尚未在 Rust 层实现');
 }

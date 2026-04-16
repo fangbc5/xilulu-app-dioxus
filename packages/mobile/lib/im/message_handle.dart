@@ -13,11 +13,11 @@ Future<List<XMessage>> getDimMessages(String id,
     if (roomId == 0) return [];
 
     final String jsonStr = await rust_api.coreGetHistoryMessages(
-      roomId: BigInt.from(roomId),
+      roomId: roomId,
       limit: num,
     );
 
-    final List<dynamic> jsonList = jsonDecode(jsonStr);
+    final List<dynamic> jsonList = jsonDecode(jsonStr) as List<dynamic>;
     final List<XMessage> messages =
         jsonList.map((e) => XMessage.fromJson(e as Map<String, dynamic>)).toList();
 

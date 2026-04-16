@@ -52,6 +52,12 @@ class RootTabBarState extends State<RootTabBar> {
       Get.to<void>(AddFriendPage());
     } else if (v == '发起群聊') {
       Get.to<void>(GroupLaunchPage());
+    } else if (v == '扫一扫') {
+      // Get.to<void>(ScanPage()); // 待开发
+      debugPrint('点击了扫一扫');
+    } else if (v == '收付款') {
+      // Get.to<void>(PayPage()); // 待开发
+      debugPrint('点击了收付款');
     } else if (v == '帮助与反馈') {
       Get.to<void>(WebViewPage(url: helpUrl, title: '帮助与反馈'));
     } else {
@@ -64,9 +70,8 @@ class RootTabBarState extends State<RootTabBar> {
     final List<Map<String, String>> actions = [
       {"title": '发起群聊', 'icon': 'assets/images/contacts_add_newmessage.png'},
       {"title": '添加朋友', 'icon': 'assets/images/ic_add_friend.webp'},
-      {"title": '扫一扫', 'icon': ''},
-      {"title": '收付款', 'icon': ''},
-      {"title": '帮助与反馈', 'icon': ''},
+      {"title": '扫一扫', 'icon': 'assets/images/wechat/contacts_add_scan@3x.png'},
+      {"title": '收付款', 'icon': 'assets/images/wechat/WCPayOfflinePay_Receive@3x.png'},
     ];
 
     final BottomNavigationBar bottomNavigationBar = BottomNavigationBar(
@@ -96,7 +101,8 @@ class RootTabBarState extends State<RootTabBar> {
           onTap: () => Get.to<void>(SearchPage()),
         ),
         WPopupMenu(
-          menuWidth: Get.width / 2.5,
+          menuWidth: 125.0,
+          menuHeight: 52.0 * actions.length,
           alignment: Alignment.center,
           onValueChanged: (String value) {
             if (value.isEmpty) return;

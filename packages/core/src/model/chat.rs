@@ -8,7 +8,7 @@ pub struct ChatRoom {
     pub last_msg: String,
     pub last_time: String,
     pub is_top: bool,
-    pub unread: u32,
+    pub unread: i32,
     pub is_mute: bool,
 }
 

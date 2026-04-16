@@ -89,7 +89,7 @@ impl ChatService {
         Ok(())
     }
 
-    pub fn unread_total(&self) -> u32 {
+    pub fn unread_total(&self) -> i32 {
         self.rooms_receiver.borrow().iter().map(|r| r.unread).sum()
     }
 }

@@ -29,6 +29,7 @@ analyzer:
     - "bin/cache/**"
     # Ignore protoc generated files
     - "dev/conductor/lib/proto/*"
+    - "lib/src/rust/**"
 
 linter:
   rules:
