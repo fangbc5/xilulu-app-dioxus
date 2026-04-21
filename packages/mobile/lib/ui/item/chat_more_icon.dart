@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 class ChatMoreIcon extends StatelessWidget {
@@ -27,12 +28,10 @@ class ChatMoreIcon extends StatelessWidget {
     )
         : InkWell(
       child: Container(
-        width: 23,
-        margin: EdgeInsets.symmetric(horizontal: 5.0),
-        child: Image.asset(
-          'assets/images/chat/ic_chat_more.webp',
-          color: mainTextColor,
-          fit: BoxFit.cover,
+        child: const Icon(
+          CupertinoIcons.add_circled,
+          size: 28,
+          color: Color(0xff111111),
         ),
       ),
       onTap: moreTap,

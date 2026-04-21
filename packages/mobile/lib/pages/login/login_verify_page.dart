@@ -7,6 +7,8 @@ import '../../src/rust/api/auth.dart' as rust_api;
 import '../../tools/wechat_flutter.dart';
 import '../root/root_page.dart';
 import '../../ui/view/main_input.dart';
+import 'package:provider/provider.dart';
+import 'package:wechat_flutter/provider/global_model.dart';
 
 class LoginVerifyPage extends StatefulWidget {
   
@@ -40,6 +42,50 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
       
       // 解析出来的 JSON
       final Map<String, dynamic> data = json.decode(resp) as Map<String, dynamic>;
+      
+      // Attempt to extract login_info (if LoginOrRegisterResponse) or user_info directly (if LoginResponse)
+      Map<String, dynamic>? userInfo;
+      if (data.containsKey('login_info')) {
+        var loginInfo = data['login_info'] as Map<String, dynamic>;
+        userInfo = loginInfo['user_info'] as Map<String, dynamic>?;
+        if (loginInfo.containsKey('access_token')) {
+          data['access_token'] = loginInfo['access_token'];
+        }
+        if (loginInfo.containsKey('refresh_token')) {
+          data['refresh_token'] = loginInfo['refresh_token'];
+        }
+      } else {
+        userInfo = data['user_info'] as Map<String, dynamic>?;
+      }
+      
+      String realAccount = widget.mobile;
+      String? nickName;
+      String? avatar;
+      if (userInfo != null) {
+        realAccount = userInfo['id']?.toString() ?? widget.mobile;
+        nickName = userInfo['nickname']?.toString();
+        avatar = userInfo['avatar']?.toString();
+        await SharedUtil.instance.saveString(Keys.account, realAccount);
+        if (nickName != null) {
+          await SharedUtil.instance.saveString(Keys.nickName, nickName);
+        }
+        if (avatar != null) {
+          await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
+        }
+      } else {
+        await SharedUtil.instance.saveString(Keys.account, widget.mobile);
+      }
+      
+      try {
+        final model = Provider.of<GlobalModel>(context, listen: false);
+        model.account = realAccount;
+        if (nickName != null) model.nickName = nickName;
+        if (avatar != null) model.avatar = avatar;
+        model.refresh();
+      } catch (e) {
+        debugPrint('GlobalModel refresh failed: $e');
+      }
+
       if (data.containsKey('access_token')) {
         await SharedUtil.instance.saveString('access_token', data['access_token'] as String);
       }
@@ -47,9 +93,9 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
         await SharedUtil.instance.saveString('refresh_token', data['refresh_token'] as String);
       }
       
-      await ImLoginManager.login(widget.mobile, context);
+      await SharedUtil.instance.saveBoolean('sync_chat_history', syncChatHistory);
       
-      // Get.offAll(RootPage()) happens inside ImLoginManager.login, 
+      await ImLoginManager.login(realAccount, context);
       // but in case it's decoupled:
       showToast('登录成功');
       Get.offAll(const RootPage());

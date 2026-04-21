@@ -12,6 +12,14 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Future<void> coreInitSdk({required String dbPath}) =>
     RustLib.instance.api.crateApiImCoreInitSdk(dbPath: dbPath);
 
+/// Allows the Flutter application to proactively push newly refreshed Tokens into the
+/// isolated Rust memory layer (`MobileStorageAdapter`), keeping the background network
+/// services natively authenticated without waiting for local HTTP rejections.
+Future<void> coreUpdateTokens(
+        {required String accessToken, required String refreshToken}) =>
+    RustLib.instance.api.crateApiImCoreUpdateTokens(
+        accessToken: accessToken, refreshToken: refreshToken);
+
 Future<void> coreStartWs(
         {required String url,
         required String token,
@@ -25,9 +33,9 @@ Stream<String> coreSubscribeImEvents() =>
 Future<String> coreSendTextMessage(
         {required PlatformInt64 roomId,
         required String content,
-        required PlatformInt64 senderUid}) =>
+        required PlatformInt64 fromUid}) =>
     RustLib.instance.api.crateApiImCoreSendTextMessage(
-        roomId: roomId, content: content, senderUid: senderUid);
+        roomId: roomId, content: content, fromUid: fromUid);
 
 /// 从本地 SQLite 获取历史消息，返回 JSON 数组字符串
 Future<String> coreGetHistoryMessages(

@@ -91,6 +91,8 @@ class RootTabBarState extends State<RootTabBar> {
 
     var appBar = ComMomBar(
       title: widget.pages[currentIndex].title,
+      centerTitle: true,
+      leadingW: Container(),
       showShadow: false,
       rightDMActions: <Widget>[
         InkWell(

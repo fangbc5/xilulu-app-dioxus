@@ -11,10 +11,13 @@ use super::models::{
     WsBaseResp, WsStatus, HEARTBEAT_INTERVAL, INITIAL_RECONNECT_DELAY, MAX_RECONNECT_DELAY,
 };
 
+use crate::port::StorageProvider;
+
 pub struct WsClient {
     status: Arc<Mutex<WsStatus>>,
     event_tx: broadcast::Sender<WsBaseResp>,
     cmd_tx: tokio::sync::mpsc::Sender<WsCmd>,
+    storage: Option<Arc<dyn StorageProvider>>,
 }
 
 #[derive(Debug)]
@@ -25,7 +28,12 @@ pub enum WsCmd {
 
 impl WsClient {
     /// Create a new WebSocket client and start its background task loop.
-    pub fn new(url: String, token: String, client_id: String) -> Self {
+    pub fn new(
+        url: String, 
+        fallback_token: String, 
+        client_id: String, 
+        storage: Option<Arc<dyn StorageProvider>>
+    ) -> Self {
         let (event_tx, _) = broadcast::channel(100);
         let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(100);
         let status = Arc::new(Mutex::new(WsStatus::Disconnected));
@@ -34,11 +42,10 @@ impl WsClient {
             status: status.clone(),
             event_tx: event_tx.clone(),
             cmd_tx,
+            storage: storage.clone(),
         };
 
-        let full_url = format!("{}?token={}&clientId={}", url, token, client_id);
-
-        tokio::spawn(Self::connection_loop(full_url, status, event_tx, cmd_rx));
+        tokio::spawn(Self::connection_loop(url, fallback_token, client_id, storage, status, event_tx, cmd_rx));
 
         client
     }
@@ -68,7 +75,10 @@ impl WsClient {
 
     /// Background loop robustly managing connection, exponential backoff, and task spawning
     async fn connection_loop(
-        url: String,
+        base_url: String,
+        fallback_token: String,
+        client_id: String,
+        storage: Option<Arc<dyn StorageProvider>>,
         status: Arc<Mutex<WsStatus>>,
         event_tx: broadcast::Sender<WsBaseResp>,
         mut cmd_rx: tokio::sync::mpsc::Receiver<WsCmd>,
@@ -78,6 +88,17 @@ impl WsClient {
         let mut attempts = 0;
 
         loop {
+            // dynamically fetch latest token if available to auto-heal expired reconnect loops
+            let mut current_token = fallback_token.clone();
+            if let Some(st) = &storage {
+                if let Ok(Some(fresh_tok)) = st.get("access_token").await {
+                    if !fresh_tok.is_empty() {
+                        current_token = fresh_tok;
+                    }
+                }
+            }
+            let url = format!("{}?token={}&clientId={}", base_url, current_token, client_id);
+
             {
                 let mut s = status.lock().await;
                 *s = WsStatus::Connecting;

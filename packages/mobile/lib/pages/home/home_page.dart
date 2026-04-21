@@ -12,6 +12,7 @@ import 'package:wechat_flutter/ui/view/pop_view.dart';
 
 import '../../tools/event/im_event.dart';
 import 'package:wechat_flutter/im/model/im_models.dart';
+import 'package:wechat_flutter/im/model/x_message.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -86,9 +87,47 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _msgStreamSubs ??= eventBusNewMsg.listen((EventBusNewMsg onData) {
-      getChatData();
+    Notice.addListener(WeChatActions.msg(), (v) {
+        if (v is Map && v['type'] == 'LATEST_UPDATE') {
+           final roomId = v['room_id'];
+           final content = v['content'];
+           final time = v['time'];
+           
+           final index = _chatData.indexWhere((m) {
+             if (m == null) return false;
+             return m.conversationId == roomId || m.peerId == roomId;
+           });
+           
+           if (index != -1) {
+              setState(() {
+                 _chatData[index]!.lastMessage = XMessage(
+                  msgId: '',
+                  roomId: int.tryParse(roomId.toString()) ?? 0,
+                  fromUid: 0,
+                  content: content,
+                  type: 1,
+                  localStatus: 0,
+                  createdAt: time
+               );
+                 // 置顶（让有新消息的顶上来）
+                 final moved = _chatData.removeAt(index);
+                 _chatData.insert(0, moved);
+              });
+           }
+        }
     });
+
+    _msgStreamSubs ??= eventBusNewMsg.listen((EventBusNewMsg onData) {
+      if (onData.covId.startsWith('LATEST_UPDATE_')) {
+         // 静默刷新已由 Notice 接管
+      } else {
+         getChatData();
+      }
+    });
+  }
+
+  bool modelIsGroup(XConversation m) {
+    return m.type == 2 || m.type == ConversationType.group;
   }
 
   @override
@@ -169,6 +208,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    Notice.removeListenerByEvent(WeChatActions.msg());
     super.dispose();
     canCelListener();
   }

@@ -10,6 +10,7 @@ import 'package:wechat_flutter/pages/root/user_page.dart';
 import 'package:wechat_flutter/provider/global_model.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:wechat_flutter/ui/view/list_tile_view.dart';
+import 'package:wechat_flutter/ui/view/list_tile_view_modern.dart';
 import 'package:wechat_flutter/ui/view/search_main_view.dart';
 import 'package:wechat_flutter/ui/view/search_tile_view.dart';
 import 'package:wechat_flutter/im/model/im_models.dart';
@@ -30,10 +31,10 @@ class _AddFriendPageState extends State<AddFriendPage> {
   TextEditingController searchC = new TextEditingController();
 
   Widget buildItem(Map<String, String> item) {
-    return new ListTileView(
-      border: item['title'] == '雷达加朋友'
+    return new ListTileViewModern(
+      border: item['title'] == '扫一扫'
           ? null
-          : Border(top: BorderSide(color: lineColor, width: 0.2)),
+          : Border(top: BorderSide(color: Color(0xFFE5E5E5), width: 0.5)),
       title: item['title']!,
       label: item['label'],
       icon: strNoEmpty(item['icon'])
@@ -49,16 +50,6 @@ class _AddFriendPageState extends State<AddFriendPage> {
 
     List<Map<String, String>> data = [
       {
-        'icon': contactAssets + 'ic_reda.webp',
-        'title': '雷达加朋友',
-        'label': '添加身边的朋友',
-      },
-      {
-        'icon': contactAssets + 'ic_group.webp',
-        'title': '面对面建群',
-        'label': '与身边的朋友进入同一个群聊'
-      },
-      {
         'icon': contactAssets + 'ic_scanqr.webp',
         'title': '扫一扫',
         'label': '扫描二维码名片',
@@ -66,47 +57,73 @@ class _AddFriendPageState extends State<AddFriendPage> {
       {
         'icon': contactAssets + 'ic_new_friend.webp',
         'title': '手机联系人',
-        'label': '添加或邀请通讯录中的朋友',
+        'label': '添加通讯录中的朋友',
       },
       {
-        'icon': contactAssets + 'ic_offical.webp',
-        'title': '公众号',
-        'label': '获取更多资讯和服务',
+        'icon': contactAssets + 'ic_reda.webp',
+        'title': '雷达',
+        'label': '添加身边的朋友',
       },
       {
         'icon': contactAssets + 'ic_search_wework.webp',
         'title': '企业微信联系人',
         'label': '通过手机号搜索企业微信用户',
       },
+      {
+        'icon': contactAssets + 'ic_group.webp',
+        'title': '面对面建群',
+        'label': '与身边的朋友进入同一个群聊'
+      },
+      {
+        'icon': contactAssets + 'ic_offical.webp',
+        'title': '公众号',
+        'label': '获取更多资讯',
+      },
+      {
+        'icon': contactAssets + 'ic_no_public.webp',
+        'title': '服务号',
+        'label': '获取更多购物信息和服务',
+      },
     ];
-    var content = [
-      new SearchMainView(
-        text: '微信号/手机号',
-        onTap: () {
-          isSearch = true;
-          setState(() {});
-          searchF.requestFocus();
-        },
-      ),
-      new Padding(
-        padding: EdgeInsets.only(top: 15.0, bottom: 30.0),
-        child: new Row(
+    
+    var searchBar = InkWell(
+      onTap: () {
+        isSearch = true;
+        setState(() {});
+        searchF.requestFocus();
+      },
+      child: Container(
+        margin: EdgeInsets.only(left: 15.0, right: 15.0, top: 10.0, bottom: 20.0),
+        height: 38.0,
+        decoration: BoxDecoration(
+          color: Color(0xFFF3F3F3),
+          borderRadius: BorderRadius.circular(6.0),
+        ),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            new Text(
-              '我的微信号：${currentUser ?? '[${model.account}]'}',
-              style: TextStyle(color: mainTextColor, fontSize: 14.0),
-            ),
-            new SizedBox(width: mainSpace * 1.5),
-            new InkWell(
-              child: new Image.asset('assets/images/mine/ic_small_code.png',
-                  color: mainTextColor.withOpacity(0.7)),
-              onTap: () => Get.to<void>(new CodePage()),
-            )
+          children: [
+            Icon(Icons.search, color: mainTextColor.withOpacity(0.5), size: 20.0),
+            SizedBox(width: 6.0),
+            Text('账号/手机号', style: TextStyle(color: mainTextColor.withOpacity(0.5), fontSize: 16.0)),
           ],
         ),
       ),
-      new Column(children: data.map(buildItem).toList())
+    );
+
+    var content = [
+      searchBar,
+      new Column(children: data.map(buildItem).toList()),
+      new Spacer(),
+      new Padding(
+        padding: EdgeInsets.only(bottom: 40.0),
+        child: new Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            // 占位用的大尺寸二维码图标
+            new Icon(CupertinoIcons.qrcode, size: 160.0, color: Colors.green),
+          ],
+        ),
+      ),
     ];
 
     return new Column(children: content);
@@ -238,19 +255,21 @@ class _AddFriendPageState extends State<AddFriendPage> {
       ];
     }
 
-    var bodyView = new SingleChildScrollView(
-      child: isSearch
-          ? new GestureDetector(
+    var bodyView = isSearch
+        ? new SingleChildScrollView(
+            child: new GestureDetector(
               child: new Column(children: searchBody()),
               onTap: () => unFocusMethod(),
-            )
-          : body(),
-    );
+            ),
+          )
+        : body();
 
     return WillPopScope(
       child: new Scaffold(
-        backgroundColor: appBarColor,
+        backgroundColor: Colors.white,
         appBar: new ComMomBar(
+          backgroundColor: Colors.white,
+          centerTitle: true,
           leadingW: isSearch ? leading : null,
           title: '添加朋友',
           titleW: isSearch ? new Row(children: searchView()) : null,

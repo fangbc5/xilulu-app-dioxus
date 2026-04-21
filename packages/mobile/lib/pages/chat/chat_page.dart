@@ -1,5 +1,6 @@
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
 import 'package:wechat_flutter/im/model/chat_data.dart';
@@ -69,7 +70,7 @@ class _ChatPageState extends State<ChatPage> {
     final List<XMessage> listChat =
         await ChatDataRep().repData(widget.id, widget.type);
     chatData.clear();
-    chatData.addAll(listChat.reversed);
+    chatData.addAll(listChat);
     if (mounted) {
       setState(() {});
     }
@@ -168,10 +169,14 @@ class _ChatPageState extends State<ChatPage> {
       }),
       onChanged: (String v) => setState(() {}),
       decoration: const InputDecoration(
-          border: InputBorder.none, contentPadding: EdgeInsets.all(5.0)),
+          isDense: true,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0)),
       controller: _textController,
       focusNode: _focusNode,
-      maxLines: 99,
+      maxLines: null,
+      keyboardType: TextInputType.multiline,
+      textInputAction: TextInputAction.send,
       cursorColor: const Color(AppColors.ChatBoxCursorColor),
       style: AppStyles.ChatBoxTextStyle,
     );
@@ -232,23 +237,69 @@ class _ChatPageState extends State<ChatPage> {
           }),
         ),
       ),
+      if (!_emojiState && !_isMore && MediaQuery.of(context).viewInsets.bottom == 0)
+        Container(
+          height: MediaQuery.of(context).padding.bottom,
+          color: const Color(0xffF7F7F7),
+        ),
     ];
 
-    final List<InkWell> rWidget = <InkWell>[
+    final List<Widget> rWidget = <Widget>[
       InkWell(
-        child: Image.asset('assets/images/right_more.png'),
+        child: Container(
+          padding: const EdgeInsets.only(right: 18.0, left: 10.0),
+          alignment: Alignment.center,
+          child: Image.asset('assets/images/right_more.png', width: 24),
+        ),
         onTap: () => Get.to<void>(widget.type == 2
             ? GroupDetailsPage(
-                widget?.id ?? widget.title,
+                widget.id,
                 callBack: (v) {},
               )
             : ChatInfoPage(widget.id)),
       )
     ];
 
+    final Widget customLeading = InkWell(
+      onTap: () {
+        if (Navigator.canPop(context)) {
+          FocusScope.of(context).requestFocus(FocusNode());
+          Navigator.pop(context);
+        }
+      },
+      child: Container(
+        height: 50.0,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 12.0),
+        child: OverflowBox(
+          maxWidth: double.infinity,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(CupertinoIcons.back, color: Colors.black, size: 28),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                decoration: BoxDecoration(
+                  color: const Color(0xffdcdcdc),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child: const Text('1', style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
     return Scaffold(
       appBar: ComMomBar(
-          title: newGroupName ?? widget.title, rightDMActions: rWidget),
+          title: newGroupName ?? widget.title, 
+          rightDMActions: rWidget,
+          leadingW: customLeading,
+      ),
       body: MainInputBody(
         onTap: () => setState(
           () {

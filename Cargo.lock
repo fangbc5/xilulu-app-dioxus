@@ -4763,6 +4763,7 @@ dependencies = [
  "async-trait",
  "flutter_rust_bridge",
  "lazy_static",
+ "serde",
  "serde_json",
  "tokio",
  "xilulu_core",

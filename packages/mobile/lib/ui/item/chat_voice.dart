@@ -143,11 +143,24 @@ class _ChatVoiceWidgetState extends State<ChatVoice> {
         moveVoiceView();
       },
       child: Container(
-        height: 50.0,
-        alignment: Alignment.center,
-        width: Get.width,
-        color: Colors.white,
-        child: Text(textShow),
+        color: Colors.transparent,
+        child: IgnorePointer(
+          child: TextField(
+            readOnly: true,
+            textAlign: TextAlign.center,
+            controller: TextEditingController(text: textShow),
+            style: const TextStyle(
+              fontSize: 17.0,
+              fontWeight: FontWeight.bold,
+              color: Color(0xff333333),
+            ),
+            decoration: const InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
+            ),
+          ),
+        ),
       ),
     );
   }

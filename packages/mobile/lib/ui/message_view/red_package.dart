@@ -16,7 +16,7 @@ class RedPackage extends StatelessWidget {
     final bool self = model.sender == globalModel.account;
     List<Widget> body = <Widget>[
       MsgAvatar(model: model, globalModel: globalModel),
-      TextItemContainer(text: '[红包] ${model.content}', action: '', isMyself: self),
+      TextItemContainer(text: '[红包] ${model.content ?? ''}', action: '', isMyself: self),
       const Spacer(),
     ];
     if (self) body = body.reversed.toList();

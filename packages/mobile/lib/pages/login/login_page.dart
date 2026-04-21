@@ -214,14 +214,15 @@ class _LoginPageState extends State<LoginPage> {
                       color: _tC.text == ''
                           ? const Color.fromRGBO(8, 191, 98, 0.5) // Light green when inactive based on screenshot
                           : const Color.fromRGBO(8, 191, 98, 1.0),
-                      onTap: () {
+                      onTap: () async {
                         if (_tC.text == '') {
-                          showToast( '请输入手机号');
+                          showToast('请输入手机号');
                         } else if (_tC.text.length >= 3) {
                           final areaCode = RegExp(r'\((.*?)\)').firstMatch(model.area)?.group(1) ?? '+86';
+                          await SharedUtil.instance.saveBoolean('sync_chat_history', isSelect);
                           Get.to(() => LoginVerifyPage(mobile: _tC.text, areaCode: areaCode));
                         } else {
-                          showToast( '请输入正确的手机号');
+                          showToast('请输入正确的手机号');
                         }
                       },
                     ),

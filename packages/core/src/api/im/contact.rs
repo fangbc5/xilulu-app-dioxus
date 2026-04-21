@@ -1,7 +1,7 @@
 use super::models::{XContact, XMessage};
 use crate::api::client::ApiClient;
-use serde::{Deserialize, Serialize};
 use crate::db::DbManager;
+use serde::{Deserialize, Serialize};
 
 /// 后端返回的会话列表项
 #[derive(Debug, Deserialize)]
@@ -16,9 +16,10 @@ struct ContactResponse {
 #[derive(Debug, Deserialize)]
 struct LastMessageResponse {
     msg_id: String,
-    sender_uid: i64,
-    msg_type: i32,
-    content: String,
+    from_uid: i64,
+    #[serde(rename = "type")]
+    msg_type: i16,
+    content: Option<String>,
     created_at: i64,
 }
 
@@ -44,10 +45,13 @@ pub async fn list_contacts(api: &ApiClient) -> Result<Vec<XContact>, String> {
             last_message: c.last_message.map(|lm| XMessage {
                 msg_id: lm.msg_id,
                 room_id: c.room_id,
-                sender_uid: lm.sender_uid,
+                from_uid: lm.from_uid,
                 msg_type: lm.msg_type,
                 content: lm.content,
-                local_status: 0, // 远端消息默认成功状态
+                reply_msg_id: None,
+                status: 0,
+                extra: None,
+                local_status: 0,
                 created_at: lm.created_at,
             }),
             show_name: None,
@@ -60,23 +64,35 @@ pub async fn list_contacts(api: &ApiClient) -> Result<Vec<XContact>, String> {
 
 /// 从本地 SQLite 数据库读取会话列表（P4 强一致性本地缓存架构）
 pub async fn list_contacts_local(db: &DbManager) -> Result<Vec<XContact>, String> {
+    // 返回字段顺序：room_id, room_type, unread_count, updated_at,
+    //               msg_id, from_uid, type, content, local_status, created_at,
+    //               show_name, face_url
     let rows: Vec<(
-        i64, i64, i64, i64,
-        Option<String>, Option<i64>, Option<i64>, Option<String>, Option<i64>, Option<i64>,
-        Option<String>, Option<String>
+        i64,       // room_id
+        i64,       // room_type
+        i64,       // unread_count
+        i64,       // updated_at
+        Option<String>, // msg_id
+        Option<i64>,    // from_uid
+        Option<i64>,    // msg type
+        Option<String>, // content
+        Option<i64>,    // local_status
+        Option<i64>,    // created_at
+        Option<String>, // show_name
+        Option<String>, // face_url
     )> = sqlx::query_as(
         r#"
         SELECT c.room_id, c.room_type, c.unread_count, c.updated_at,
-               m.msg_id, m.sender_uid, m.msg_type, m.content, m.local_status, m.created_at,
-               COALESCE(u.nick_name, g.name) as show_name,
-               COALESCE(u.avatar, g.avatar) as face_url
-        FROM contacts c
-        LEFT JOIN messages m ON c.last_msg_id = m.msg_id
-        LEFT JOIN user_profiles u ON c.room_type = 1 AND c.friend_uid = u.uid
-        LEFT JOIN groups g ON c.room_type = 2 AND c.room_id = g.room_id
+               m.msg_id, m.from_uid, m.type, m.content, m.local_status, m.created_at,
+               COALESCE(u.nick_name, g.name)   AS show_name,
+               COALESCE(u.avatar,   g.avatar)  AS face_url
+        FROM contact c
+        LEFT JOIN message m       ON c.last_msg_id = CAST(m.msg_id AS INTEGER)
+        LEFT JOIN user_profile u  ON c.room_type = 1 AND c.friend_uid = u.uid
+        LEFT JOIN room_group g    ON c.room_type = 2 AND c.room_id = g.room_id
         WHERE c.is_deleted = 0
         ORDER BY c.updated_at DESC
-        "#
+        "#,
     )
     .fetch_all(&db.pool)
     .await
@@ -84,23 +100,32 @@ pub async fn list_contacts_local(db: &DbManager) -> Result<Vec<XContact>, String
 
     let mut res = Vec::new();
     for (
-        room_id, room_type, unread_count, updated_at,
-        msg_id, sender_uid, msg_type, content, local_status, created_at,
-        show_name, face_url
-    ) in rows {
-        let last_message = if let Some(msg_id) = msg_id {
-            Some(XMessage {
-                msg_id,
-                room_id,
-                sender_uid: sender_uid.unwrap_or(0),
-                msg_type: msg_type.unwrap_or(0) as i32,
-                content: content.unwrap_or_default(),
-                local_status: local_status.unwrap_or(0) as i32,
-                created_at: created_at.unwrap_or(0),
-            })
-        } else {
-            None
-        };
+        room_id,
+        room_type,
+        unread_count,
+        updated_at,
+        msg_id,
+        from_uid,
+        msg_type,
+        content,
+        local_status,
+        created_at,
+        show_name,
+        face_url,
+    ) in rows
+    {
+        let last_message = msg_id.map(|mid| XMessage {
+            msg_id: mid,
+            room_id,
+            from_uid: from_uid.unwrap_or(0),
+            msg_type: msg_type.unwrap_or(1) as i16,
+            content,
+            reply_msg_id: None,
+            status: 0,
+            extra: None,
+            local_status: local_status.unwrap_or(0) as i32,
+            created_at: created_at.unwrap_or(0),
+        });
 
         res.push(XContact {
             room_id,

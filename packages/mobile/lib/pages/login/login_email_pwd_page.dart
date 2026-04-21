@@ -6,6 +6,8 @@ import '../../src/rust/api/auth.dart' as rust_api;
 import '../../tools/wechat_flutter.dart';
 import '../root/root_page.dart';
 import '../../ui/view/main_input.dart';
+import 'package:provider/provider.dart';
+import 'package:wechat_flutter/provider/global_model.dart';
 
 class LoginEmailPwdPage extends StatefulWidget {
   const LoginEmailPwdPage({super.key});
@@ -33,7 +35,35 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
       // 解析 FFI 返回的附带用户身份信息的 JSON
       final Map<String, dynamic> data = json.decode(respJson) as Map<String, dynamic>;
       
-      await SharedUtil.instance.saveString(Keys.account, _accountC.text);
+      final userInfo = data['user_info'] as Map<String, dynamic>?;
+      String realAccount = _accountC.text;
+      String? nickName;
+      String? avatar;
+      if (userInfo != null) {
+        realAccount = userInfo['id']?.toString() ?? _accountC.text;
+        nickName = userInfo['nickname']?.toString();
+        avatar = userInfo['avatar']?.toString();
+        await SharedUtil.instance.saveString(Keys.account, realAccount);
+        if (nickName != null) {
+          await SharedUtil.instance.saveString(Keys.nickName, nickName);
+        }
+        if (avatar != null) {
+          await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
+        }
+      } else {
+        await SharedUtil.instance.saveString(Keys.account, _accountC.text);
+      }
+      
+      try {
+        final model = Provider.of<GlobalModel>(context, listen: false);
+        model.account = realAccount;
+        if (nickName != null) model.nickName = nickName;
+        if (avatar != null) model.avatar = avatar;
+        model.refresh();
+      } catch (e) {
+        debugPrint('GlobalModel refresh failed: $e');
+      }
+
       if (data.containsKey('access_token')) {
         await SharedUtil.instance.saveString('access_token', data['access_token'] as String);
       }
@@ -41,7 +71,9 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
         await SharedUtil.instance.saveString('refresh_token', data['refresh_token'] as String);
       }
       
-      await ImLoginManager.login(_accountC.text, context);
+      await SharedUtil.instance.saveBoolean('sync_chat_history', syncChatHistory);
+      
+      await ImLoginManager.login(realAccount, context);
       showToast('登录成功，Token 已自动挂载');
       Get.offAll(const RootPage());
     } catch (e) {

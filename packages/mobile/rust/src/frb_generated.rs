@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2085900690;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -682704822;
 
 // Section: executor
 
@@ -1052,7 +1052,7 @@ fn wire__crate__api__im__core_send_text_message_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_room_id = <i64>::sse_decode(&mut deserializer);
             let api_content = <String>::sse_decode(&mut deserializer);
-            let api_sender_uid = <i64>::sse_decode(&mut deserializer);
+            let api_from_uid = <i64>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, String>(
@@ -1060,7 +1060,7 @@ fn wire__crate__api__im__core_send_text_message_impl(
                         let output_ok = crate::api::im::core_send_text_message(
                             api_room_id,
                             api_content,
-                            api_sender_uid,
+                            api_from_uid,
                         )
                         .await?;
                         Ok(output_ok)
@@ -1224,6 +1224,46 @@ fn wire__crate__api__im__core_update_group_info_impl(
                             api_notification,
                         )
                         .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__im__core_update_tokens_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "core_update_tokens",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_access_token = <String>::sse_decode(&mut deserializer);
+            let api_refresh_token = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, ()>(
+                    (move || async move {
+                        let output_ok = Result::<_, ()>::Ok({
+                            crate::api::im::core_update_tokens(api_access_token, api_refresh_token)
+                                .await;
+                        })?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1562,9 +1602,10 @@ fn pde_ffi_dispatcher_primary_impl(
             wire__crate__api__im__core_subscribe_im_events_impl(port, ptr, rust_vec_len, data_len)
         }
         31 => wire__crate__api__im__core_update_group_info_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__im__core_update_user_info_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__oss__core_upload_file_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__common__ping_core_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__im__core_update_tokens_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__im__core_update_user_info_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__oss__core_upload_file_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__common__ping_core_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1577,7 +1618,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        34 => wire__crate__api__common__init_app_impl(ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__common__init_app_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

@@ -9,7 +9,7 @@ class XConversation {
   final String? showName;
   final String? faceUrl;
   final int unreadCount;
-  final XMessage? lastMessage;
+  XMessage? lastMessage;
   final String? draftText;
   final bool isPinned;
 

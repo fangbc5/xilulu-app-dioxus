@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:wechat_flutter/config/provider_config.dart';
 import 'package:wechat_flutter/app.dart';
 import 'package:wechat_flutter/tools/data/data.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'config/storage_manager.dart';
 
@@ -15,8 +16,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
   
-  // 初始化 Rust 核心 SDK 数据库 (目前使用内存库方便测试，正式环境后续接入本地存储)
-  await coreInitSdk(dbPath: 'sqlite::memory:');
+  // 初始化 Rust 核心 SDK 数据库 (正式落地为本地存储)
+  final supportDir = await getApplicationDocumentsDirectory();
+  final dbPath = "${supportDir.path}/im_local.db";
+  
+  debugPrint("=====================================================");
+  debugPrint("🟢 [RUST SQLITE DB PATH]: $dbPath");
+  debugPrint("=====================================================");
+  
+  await coreInitSdk(dbPath: dbPath);
   
   /// 数据初始化
   await Data.initData();

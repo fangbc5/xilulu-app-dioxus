@@ -48,9 +48,9 @@ pub async fn list_friends(api: &ApiClient) -> Result<Vec<FriendInfo>, String> {
 pub async fn list_friends_local(db: &DbManager) -> Result<Vec<FriendInfo>, String> {
     // 关联好友表和用户画像表，只返回状态为正常的 (status=1)
     let rows: Vec<(i64, Option<String>, i64, Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT f.uid, f.remark, f.updated_at, u.nick_name, u.avatar
-         FROM friends f
-         LEFT JOIN user_profiles u ON f.uid = u.uid
+        "SELECT f.friend_uid as uid, f.remark, f.updated_at, u.nick_name, u.avatar
+         FROM user_friend f
+         LEFT JOIN user_profile u ON f.friend_uid = u.uid
          WHERE f.status = 1"
     )
     .fetch_all(&db.pool)

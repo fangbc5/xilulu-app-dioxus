@@ -79,10 +79,10 @@ pub async fn get_group_info(api: &ApiClient, group_id: i64) -> Result<GroupInfo,
 pub async fn get_group_info_local(db: &DbManager, group_id: i64) -> Result<GroupInfo, String> {
     let row: Option<(i64, String, Option<i64>, Option<String>, Option<String>, i64, i32)> = sqlx::query_as(
         r#"
-        SELECT g.group_id, g.name, g.owner_uid, g.avatar, g.notice, g.updated_at,
-               (SELECT COUNT(*) FROM group_members WHERE group_id = g.group_id) as member_count
-        FROM groups g
-        WHERE g.group_id = ? AND g.is_deleted = 0
+        SELECT g.id, g.name, g.created_by, g.avatar, g.notice, g.updated_at,
+               (SELECT COUNT(*) FROM group_member WHERE group_id = g.id) as member_count
+        FROM room_group g
+        WHERE g.id = ? AND g.is_deleted = 0
         "#
     )
     .bind(group_id as i64)
@@ -90,11 +90,11 @@ pub async fn get_group_info_local(db: &DbManager, group_id: i64) -> Result<Group
     .await
     .map_err(|e| e.to_string())?;
 
-    if let Some((gid, name, owner_uid, avatar, notice, updated_at, member_count)) = row {
+    if let Some((gid, name, created_by, avatar, notice, updated_at, member_count)) = row {
         Ok(GroupInfo {
             id: gid,
             name,
-            owner_uid: owner_uid.unwrap_or(0),
+            owner_uid: created_by.unwrap_or(0),
             face_url: avatar,
             introduction: None,
             notification: notice,
@@ -128,8 +128,8 @@ pub async fn list_group_members_local(db: &DbManager, group_id: i64) -> Result<V
     let rows: Vec<(i64, i64, i64, i64, Option<String>, Option<String>)> = sqlx::query_as(
         r#"
         SELECT gm.uid, gm.group_id, gm.role, gm.updated_at, u.nick_name, u.avatar
-        FROM group_members gm
-        LEFT JOIN user_profiles u ON gm.uid = u.uid
+        FROM group_member gm
+        LEFT JOIN user_profile u ON gm.uid = u.uid
         WHERE gm.group_id = ?
         "#
     )

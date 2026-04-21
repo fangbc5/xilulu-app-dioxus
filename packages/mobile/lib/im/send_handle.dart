@@ -11,16 +11,18 @@ typedef CallbackMsg = void Function(XMessage messageInfo);
 Future<void> sendTextMsg(String targetId, int type, String context, {CallbackMsg? call}) async {
   try {
     int parsedRoomId = int.tryParse(targetId) ?? 0;
-    // TODO: 从用户配置中获取当前登录用户 UID
-    int senderUid = 1;
+    
+    // 从缓存提取当前登录用户的 UID (Account)
+    String accountStr = await SharedUtil.instance.getString(Keys.account) ?? "0";
+    int fromUid = int.tryParse(accountStr) ?? 0;
 
-    debugPrint('开始调用 Rust FFI: coreSendTextMessage($parsedRoomId, $context, $senderUid)');
+    debugPrint('开始调用 Rust FFI: coreSendTextMessage($parsedRoomId, $context, $fromUid)');
 
     // 调用自研 Rust SDK 发送消息
     final rustResponseJson = await coreSendTextMessage(
         roomId: parsedRoomId,
         content: context,
-        senderUid: senderUid);
+        fromUid: fromUid);
 
     debugPrint('Rust FFI 消息发送完成: $rustResponseJson');
 
