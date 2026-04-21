@@ -11,7 +11,7 @@ typedef OnSuCc = void Function(bool v);
 
 /// 添加好友
 Future<dynamic> addFriend(String userName, BuildContext context,
-    {OnSuCc? suCc}) async {
+    {String? message, OnSuCc? suCc}) async {
   try {
     // userName 可能是 user_id 字符串，需要转换为 u64
     final targetUid = int.tryParse(userName);
@@ -20,7 +20,7 @@ Future<dynamic> addFriend(String userName, BuildContext context,
       return;
     }
 
-    await rust_im.coreAddFriend(targetUid: targetUid, message: '你好，我想加你为好友');
+    await rust_im.coreAddFriend(targetUid: targetUid, message: message ?? '你好，我想加你为好友');
     showToast('好友申请已发送');
     if (suCc == null) {
       popToHomePage(context);
@@ -63,10 +63,10 @@ Future<List<XFriendInfo>> getContactsFriends(String userName) async {
     final List<dynamic> friendsJson = json.decode(jsonStr) as List<dynamic>;
 
     return friendsJson.map((friendData) {
-      final userId = friendData['user_id']?.toString() ?? '';
+      final userId = friendData['friend_uid']?.toString() ?? '';
       final nickName = friendData['nick_name']?.toString();
-      final faceUrl = friendData['face_url']?.toString();
-      final friendRemark = friendData['friend_remark']?.toString();
+      final faceUrl = friendData['avatar']?.toString();
+      final friendRemark = friendData['remark']?.toString();
 
       return XFriendInfo(
         userId: userId,
@@ -92,9 +92,9 @@ Future<List<XUserInfo>> searchUser(String keyword) async {
 
     return usersJson.map((userData) {
       return XUserInfo(
-        userId: userData['user_id']?.toString() ?? '',
+        userId: userData['id']?.toString() ?? '',
         nickName: userData['nick_name']?.toString(),
-        faceUrl: userData['face_url']?.toString(),
+        faceUrl: userData['avatar']?.toString(),
       );
     }).toList();
   } catch (e) {
@@ -110,12 +110,12 @@ Future<List<XFriendApplication>> getFriendApplications() async {
     final List<dynamic> appliesJson = json.decode(jsonStr) as List<dynamic>;
 
     return appliesJson.map((applyData) {
-      final fromUser = applyData['from_user'];
       return XFriendApplication(
-        userId: applyData['from_uid']?.toString(),
-        nickName: fromUser?['nick_name']?.toString(),
-        faceUrl: fromUser?['face_url']?.toString(),
-        addWording: applyData['message']?.toString(),
+        id: applyData['id'] as int?,
+        userId: applyData['uid']?.toString(),
+        nickName: applyData['nick_name']?.toString(),
+        faceUrl: applyData['avatar']?.toString(),
+        addWording: applyData['msg']?.toString(),
         type: applyData['status'] as int?,
       );
     }).toList();

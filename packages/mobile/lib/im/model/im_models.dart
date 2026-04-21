@@ -97,13 +97,15 @@ class XFriendInfo {
 
 /// 自研好友申请模型，替代 V2TimFriendApplication
 class XFriendApplication {
+  int? id;
   String? userId;
   String? nickName;
   String? faceUrl;
   String? addWording;
-  int? type;
+  int? type; // 0待审批 1同意 2拒绝
 
   XFriendApplication({
+    this.id,
     this.userId,
     this.nickName,
     this.faceUrl,

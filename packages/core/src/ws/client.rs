@@ -1,6 +1,7 @@
 use futures_util::{SinkExt, StreamExt};
 use reqwest::Client;
 use reqwest_websocket::{Message, RequestBuilderExt};
+use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex};
@@ -11,6 +12,7 @@ use super::models::{
     WsBaseResp, WsStatus, HEARTBEAT_INTERVAL, INITIAL_RECONNECT_DELAY, MAX_RECONNECT_DELAY,
 };
 
+use crate::api::client::{ApiResponse, BASE_URL};
 use crate::port::StorageProvider;
 
 pub struct WsClient {
@@ -24,6 +26,12 @@ pub struct WsClient {
 pub enum WsCmd {
     Send(Message),
     Disconnect,
+}
+
+#[derive(Deserialize, Debug)]
+struct WsRefreshResp {
+    access_token: String,
+    refresh_token: String,
 }
 
 impl WsClient {
@@ -73,6 +81,40 @@ impl WsClient {
         *s
     }
 
+    /// WS 重连前主动尝试用 refresh_token 刷新 access_token，
+    /// 避免拿过期 token 去连 WS 造成死循环。
+    async fn try_refresh_token_for_ws(
+        client: &Client,
+        storage: &Arc<dyn StorageProvider>,
+    ) -> Option<String> {
+        let r_token = storage.get("refresh_token").await.ok().flatten()?;
+        if r_token.is_empty() {
+            return None;
+        }
+
+        let refresh_url = format!("{}/api/v1/auth/refresh-token", BASE_URL);
+        let body = json!({ "refresh_token": r_token });
+
+        let resp = client.post(&refresh_url).json(&body).send().await.ok()?;
+        if !resp.status().is_success() {
+            warn!("[WS] Token refresh returned {}", resp.status());
+            return None;
+        }
+
+        let raw = resp.text().await.ok()?;
+        let api_resp = serde_json::from_str::<ApiResponse<WsRefreshResp>>(&raw).ok()?;
+        if !api_resp.success {
+            return None;
+        }
+        let data = api_resp.data?;
+
+        // 写回 storage，让 HTTP 层也能受益
+        let _ = storage.set("access_token", &data.access_token).await;
+        let _ = storage.set("refresh_token", &data.refresh_token).await;
+        info!("[WS] Token refreshed proactively before reconnect.");
+        Some(data.access_token)
+    }
+
     /// Background loop robustly managing connection, exponential backoff, and task spawning
     async fn connection_loop(
         base_url: String,
@@ -88,7 +130,7 @@ impl WsClient {
         let mut attempts = 0;
 
         loop {
-            // dynamically fetch latest token if available to auto-heal expired reconnect loops
+            // 1. 先从 storage 读取最新 access_token
             let mut current_token = fallback_token.clone();
             if let Some(st) = &storage {
                 if let Ok(Some(fresh_tok)) = st.get("access_token").await {
@@ -97,6 +139,16 @@ impl WsClient {
                     }
                 }
             }
+
+            // 2. 如果已经重连过 1 次以上，说明当前 token 可能过期，主动刷新
+            if attempts > 0 {
+                if let Some(st) = &storage {
+                    if let Some(new_tok) = Self::try_refresh_token_for_ws(&client, st).await {
+                        current_token = new_tok;
+                    }
+                }
+            }
+
             let url = format!("{}?token={}&clientId={}", base_url, current_token, client_id);
 
             {
@@ -104,7 +156,7 @@ impl WsClient {
                 *s = WsStatus::Connecting;
             }
 
-            info!("[WS] Connecting to {} (Attempt: {})", url, attempts);
+            info!("[WS] Connecting (Attempt: {})", attempts);
 
             let req = match client.get(&url).upgrade().send().await {
                 Ok(r) => r,
@@ -233,3 +285,4 @@ impl WsClient {
         *delay = std::cmp::min(*delay * 2, MAX_RECONNECT_DELAY);
     }
 }
+

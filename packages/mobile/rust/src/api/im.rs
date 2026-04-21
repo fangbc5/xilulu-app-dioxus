@@ -4,21 +4,21 @@ use std::sync::Arc;
 use crate::api::GLOBAL_API_CLIENT;
 use xilulu_core::api::im::message::send_text_message;
 pub use xilulu_core::api::im::models::{XContact, XEvent, XMessage};
+use xilulu_core::port::StorageProvider;
 use xilulu_core::ws::client::WsClient;
 
 lazy_static::lazy_static! {
     /// SDK Singleton Global Database
     pub static ref GLOBAL_DB: tokio::sync::RwLock<Option<xilulu_core::db::DbManager>> = tokio::sync::RwLock::new(None);
 
-    /// Flutter Event Sink
+    /// Flutter Event Sink — hot restart 后 core_subscribe_im_events 会替换它
     pub static ref FLUTTER_STREAM: std::sync::Mutex<Option<StreamSink<String>>> = std::sync::Mutex::new(None);
 
-    /// Global WS Client singleton
-    pub static ref GLOBAL_WS_CLIENT: tokio::sync::OnceCell<Arc<WsClient>> = tokio::sync::OnceCell::new();
+    /// Global WS Client — 用 RwLock 替代 OnceCell，允许 hot restart 后重新创建
+    pub static ref GLOBAL_WS_CLIENT: tokio::sync::RwLock<Option<Arc<WsClient>>> = tokio::sync::RwLock::new(None);
 }
 
 pub async fn core_init_sdk(db_path: String) -> Result<(), String> {
-    // Initialize the SQLite local persistent storage
     let db_url = format!("sqlite://{}", db_path);
     let manager = xilulu_core::db::DbManager::new(&db_url)
         .await
@@ -29,9 +29,8 @@ pub async fn core_init_sdk(db_path: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Allows the Flutter application to proactively push newly refreshed Tokens into the
-/// isolated Rust memory layer (`MobileStorageAdapter`), keeping the background network
-/// services natively authenticated without waiting for local HTTP rejections.
+/// 将 Flutter 侧（SharedPreferences）持久化的 Token 注入到 Rust GLOBAL_STORAGE。
+/// 应在 main.dart 的 coreInitSdk 之后立即调用，以恢复上次登录状态。
 pub async fn core_update_tokens(access_token: String, refresh_token: String) {
     use xilulu_core::port::StorageProvider;
     let _ = crate::api::GLOBAL_STORAGE
@@ -42,41 +41,94 @@ pub async fn core_update_tokens(access_token: String, refresh_token: String) {
         .await;
 }
 
-pub async fn core_start_ws(url: String, token: String, client_id: String) -> Result<(), String> {
-    use xilulu_core::port::StorageProvider;
-    let mut actual_access_token = token.clone();
-    let mut sync_history_val = true;
-
-    // 如果是从 Flutter Dart 层利用 JSON 夹带了 access 和 refresh 两个 Token
-    // 则在这里强行提取，完美避免 FFI Signature 修改导致的编解码崩溃问题
-    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&token) {
-        if let Some(acc) = data.get("access").and_then(|v| v.as_str()) {
-            actual_access_token = acc.to_string();
-            let _ = crate::api::GLOBAL_STORAGE.set("access_token", acc).await;
+/// 启动 WebSocket 连接和 IM 后台任务。
+///
+/// Token 已通过 core_update_tokens 注入到 GLOBAL_STORAGE，此处不再需要传入。
+/// - `url`: WebSocket 服务端地址，如 "ws://127.0.0.1:8080/ws"
+/// - `client_id`: 设备唯一标识（UUID v4）
+/// - `sync_chat_history`: 是否同步近期聊天记录
+pub async fn core_start_ws(
+    url: String,
+    client_id: String,
+    sync_chat_history: bool,
+) -> Result<(), String> {
+    // 1. 断开并销毁旧的 WS 连接（hot restart 场景）
+    {
+        let mut guard = GLOBAL_WS_CLIENT.write().await;
+        if let Some(old_ws) = guard.take() {
+            old_ws.disconnect().await;
         }
-        if let Some(ref_tok) = data.get("refresh").and_then(|v| v.as_str()) {
-            let _ = crate::api::GLOBAL_STORAGE
-                .set("refresh_token", ref_tok)
-                .await;
-        }
-        if let Some(sync_flg) = data.get("sync_chat_history").and_then(|v| v.as_bool()) {
-            sync_history_val = sync_flg;
-        }
-    } else {
-        // Fallback for single standard token if not JSON format
-        let _ = crate::api::GLOBAL_STORAGE.set("access_token", &token).await;
     }
 
+    // 2. 从 GLOBAL_STORAGE 读取最新 access_token
+    let access_token = crate::api::GLOBAL_STORAGE
+        .get("access_token")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+
+    if access_token.is_empty() {
+        eprintln!("[WS] access_token 为空，跳过 WS 连接。请先调用 core_update_tokens。");
+        return Err("access_token is empty".to_string());
+    }
+
+    // 3. 建立 WS 连接
     let ws = Arc::new(WsClient::new(
         url,
-        actual_access_token,
+        access_token,
         client_id.clone(),
         Some(crate::api::GLOBAL_STORAGE.clone()),
     ));
-    GLOBAL_WS_CLIENT.set(ws.clone()).unwrap_or(());
 
-    let my_uid = client_id.parse::<i64>().unwrap_or(0);
+    {
+        let mut guard = GLOBAL_WS_CLIENT.write().await;
+        *guard = Some(ws.clone());
+    }
 
+    // my_uid 用于增量同步，从 GLOBAL_STORAGE 读取（登录time写入）
+    let my_uid = crate::api::GLOBAL_STORAGE
+        .get("user_id")
+        .await
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0);
+
+    // 4. 启动 TOKEN_REFRESHED 转发任务
+    //    监听 GLOBAL_STORAGE 的 token 更新广播，转推给 Flutter，
+    //    Flutter 收到后将新 token 写回 SharedPreferences 持久化
+    let mut token_rx = crate::api::GLOBAL_STORAGE.subscribe_token_updates();
+    tokio::spawn(async move {
+        while token_rx.recv().await.is_ok() {
+            let access = crate::api::GLOBAL_STORAGE
+                .get("access_token")
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+            let refresh = crate::api::GLOBAL_STORAGE
+                .get("refresh_token")
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+
+            if !access.is_empty() {
+                if let Ok(guard) = FLUTTER_STREAM.lock() {
+                    if let Some(sink) = guard.as_ref() {
+                        let json = format!(
+                            "{{\"TOKEN_REFRESHED\": {{\"access\": \"{}\", \"refresh\": \"{}\"}}}}",
+                            access, refresh
+                        );
+                        let _ = sink.add(json);
+                    }
+                }
+            }
+        }
+    });
+
+    // 5. 启动增量同步任务
     tokio::spawn(async move {
         if let Some(db) = &*GLOBAL_DB.read().await {
             match xilulu_core::api::im::sync::execute_sync(
@@ -92,16 +144,14 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                             let _ = sink.add(
                                 serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
                             );
-                            // DEBUG
-                            let _ = sink.add("{\"DEBUG_SYNC\": \"Sync successful\"}".to_string());
                         }
                     }
 
-                    // 调用完全独立的最近消息分块拉取器 (根据 sync_chat_history 布尔参数)
+                    // 拉取近期消息
                     match xilulu_core::api::im::sync::execute_recent_messages_sync(
                         &crate::api::GLOBAL_API_CLIENT,
                         db,
-                        sync_history_val,
+                        sync_chat_history,
                         |latest_msg| {
                             if let Ok(guard) = FLUTTER_STREAM.lock() {
                                 if let Some(sink) = guard.as_ref() {
@@ -116,36 +166,25 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                     )
                     .await
                     {
-                        Ok(success_msg) => {
-                            if let Ok(guard) = FLUTTER_STREAM.lock() {
-                                if let Some(sink) = guard.as_ref() {
-                                    let _ = sink.add(format!(
-                                        "{{\"DEBUG_SYNC\": \"Recent messages sync finished: {}\"}}",
-                                        success_msg.replace("\"", "'")
-                                    ));
-                                }
-                            }
-                        }
+                        Ok(_) => {}
                         Err(e) => {
-                            eprintln!("最近历史消息同步管线崩溃: {}", e);
-                            if let Ok(guard) = FLUTTER_STREAM.lock() {
-                                if let Some(sink) = guard.as_ref() {
-                                    let _ = sink.add(format!(
-                                        "{{\"DEBUG_SYNC\": \"Recent msg sync failed: {}\"}}",
-                                        e.replace("\"", "'")
-                                    ));
-                                }
-                            }
+                            eprintln!("最近历史消息同步失败: {}", e);
                         }
                     }
                 }
                 Err(e) => {
+                    let err_str = e.replace('"', "'");
+                    let is_auth_failure = err_str.contains("UNAUTHORIZED");
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
                             let _ = sink.add(format!(
                                 "{{\"DEBUG_SYNC\": \"Sync failed: {}\"}}",
-                                e.replace("\"", "'")
+                                err_str
                             ));
+                            if is_auth_failure {
+                                // Token 不可恢复，通知 Flutter 跳转登录页
+                                let _ = sink.add("{\"AUTH_EXPIRED\": true}".to_string());
+                            }
                         }
                     }
                 }
@@ -153,15 +192,14 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
         } else {
             if let Ok(guard) = FLUTTER_STREAM.lock() {
                 if let Some(sink) = guard.as_ref() {
-                    let _ = sink.add("{\"DEBUG_SYNC\": \"GLOBAL_DB is None!!!\"}".to_string());
+                    let _ = sink.add("{\"DEBUG_SYNC\": \"GLOBAL_DB is None!\"}".to_string());
                 }
             }
         }
     });
 
-    // Spawn a listener that pipes raw WS events to Flutter & DB
+    // 6. 订阅 WS 事件，处理实时消息
     let mut rx = ws.subscribe();
-
     tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             // 文本消息
@@ -181,9 +219,8 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                 }
 
                 if let Ok(bm) = serde_json::from_value::<BackendMsg>(msg.data) {
-                    let msg_id = bm.id.unwrap_or(0).to_string();
                     let xmsg = XMessage {
-                        msg_id,
+                        msg_id: bm.id.unwrap_or(0).to_string(),
                         room_id: bm.room_id.unwrap_or(0),
                         from_uid: bm.from_uid.unwrap_or(0),
                         content: bm.content,
@@ -195,12 +232,10 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                         created_at: bm.created_at.unwrap_or(0),
                     };
 
-                    // 1. Save to DB
                     if let Some(db) = &*GLOBAL_DB.read().await {
                         xilulu_core::api::im::message::save_incoming_message(db, &xmsg).await;
                     }
 
-                    // 2. Transmit to Flutter
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
                             if let Ok(json_str) =
@@ -210,16 +245,10 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                             }
                         }
                     }
-                } else {
-                    eprintln!("Failed to parse incoming WS Message payload!");
                 }
             }
             // 业务变更信令，触发增量同步
             else if msg.msg_type == 1003 || msg.msg_type == 1004 || msg.msg_type == 1005 {
-                println!(
-                    "Received business change event {}, triggering sync...",
-                    msg.msg_type
-                );
                 if let Some(db) = &*GLOBAL_DB.read().await {
                     if let Err(e) = xilulu_core::api::im::sync::execute_sync(
                         &crate::api::GLOBAL_API_CLIENT,
@@ -228,17 +257,15 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
                     )
                     .await
                     {
-                        eprintln!("Failed event-triggered sync: {}", e);
+                        eprintln!("事件触发同步失败: {}", e);
                     }
 
-                    // Notify Flutter that data has been updated, so UI can re-read DB
-                    // (You can add specific events in XEvent like OnDataChanged)
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
                             if let Ok(json_str) =
                                 serde_json::to_string(&XEvent::OnConversationListUpdated)
                             {
-                                let _ = sink.add(json_str); // Trigger UI rebuild
+                                let _ = sink.add(json_str);
                             }
                         }
                     }
@@ -249,6 +276,7 @@ pub async fn core_start_ws(url: String, token: String, client_id: String) -> Res
 
     Ok(())
 }
+
 
 pub fn core_subscribe_im_events(sink: StreamSink<String>) {
     if let Ok(mut guard) = FLUTTER_STREAM.lock() {

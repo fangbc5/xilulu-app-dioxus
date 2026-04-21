@@ -29,55 +29,51 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
     }
     
     try {
-      showToast('正在向 Rust FFI 网关请求...');
-      final respJson = await rust_api.coreLoginWithPwd(account: _accountC.text, password: _pwdC.text, region: null);
+      showToast('登录中...');
+      final respJson = await rust_api.coreLoginWithPwd(
+        account: _accountC.text,
+        password: _pwdC.text,
+        region: null,
+      );
       
-      // 解析 FFI 返回的附带用户身份信息的 JSON
+      // 解析用户信息（仅用于 UI 更新），Token 已由 Rust auth.rs 写入 GLOBAL_STORAGE
       final Map<String, dynamic> data = json.decode(respJson) as Map<String, dynamic>;
-      
       final userInfo = data['user_info'] as Map<String, dynamic>?;
-      String realAccount = _accountC.text;
-      String? nickName;
-      String? avatar;
-      if (userInfo != null) {
-        realAccount = userInfo['id']?.toString() ?? _accountC.text;
-        nickName = userInfo['nickname']?.toString();
-        avatar = userInfo['avatar']?.toString();
-        await SharedUtil.instance.saveString(Keys.account, realAccount);
-        if (nickName != null) {
-          await SharedUtil.instance.saveString(Keys.nickName, nickName);
-        }
-        if (avatar != null) {
-          await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
-        }
-      } else {
-        await SharedUtil.instance.saveString(Keys.account, _accountC.text);
-      }
+      final String userId    = userInfo?['id']?.toString() ?? _accountC.text;
+      final String? nickName = userInfo?['nickname']?.toString();
+      final String? avatar   = userInfo?['avatar']?.toString();
+
+      // 持久化用户 UI 信息 + 标记已登录
+      await SharedUtil.instance.saveBoolean(Keys.hasLogged, true);
+      await SharedUtil.instance.saveString(Keys.account, userId);
+      if (nickName != null) await SharedUtil.instance.saveString(Keys.nickName, nickName);
+      if (avatar   != null) await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
       
+      // 持久化 Token 到 SharedPreferences（作为冷启动备份，TOKEN_REFRESHED 事件会持续更新）
+      final String access  = data['access_token']  as String? ?? '';
+      final String refresh = data['refresh_token'] as String? ?? '';
+      if (access.isNotEmpty) {
+        await SharedUtil.instance.saveString('access_token', access);
+        await SharedUtil.instance.saveString('refresh_token', refresh);
+      }
+
+      // 更新内存中的 GlobalModel
       try {
         final model = Provider.of<GlobalModel>(context, listen: false);
-        model.account = realAccount;
+        model.account = userId;
         if (nickName != null) model.nickName = nickName;
-        if (avatar != null) model.avatar = avatar;
+        if (avatar   != null) model.avatar = avatar;
         model.refresh();
       } catch (e) {
         debugPrint('GlobalModel refresh failed: $e');
       }
 
-      if (data.containsKey('access_token')) {
-        await SharedUtil.instance.saveString('access_token', data['access_token'] as String);
-      }
-      if (data.containsKey('refresh_token')) {
-        await SharedUtil.instance.saveString('refresh_token', data['refresh_token'] as String);
-      }
-      
-      await SharedUtil.instance.saveBoolean('sync_chat_history', syncChatHistory);
-      
-      await ImLoginManager.login(realAccount, context);
-      showToast('登录成功，Token 已自动挂载');
+      // 启动 WS 会话（Token 已在 Rust GLOBAL_STORAGE 中）
+      await ImLoginManager.startWs(syncChatHistory: syncChatHistory);
+      showToast('登录成功');
       Get.offAll(const RootPage());
     } catch (e) {
-      debugPrint('Login FFI Error: $e');
+      debugPrint('Login Error: $e');
       showToast('登录失败: \n$e');
     }
   }

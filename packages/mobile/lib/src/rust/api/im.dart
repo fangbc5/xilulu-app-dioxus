@@ -12,20 +12,25 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 Future<void> coreInitSdk({required String dbPath}) =>
     RustLib.instance.api.crateApiImCoreInitSdk(dbPath: dbPath);
 
-/// Allows the Flutter application to proactively push newly refreshed Tokens into the
-/// isolated Rust memory layer (`MobileStorageAdapter`), keeping the background network
-/// services natively authenticated without waiting for local HTTP rejections.
+/// 将 Flutter 侧（SharedPreferences）持久化的 Token 注入到 Rust GLOBAL_STORAGE。
+/// 应在 main.dart 的 coreInitSdk 之后立即调用，以恢复上次登录状态。
 Future<void> coreUpdateTokens(
         {required String accessToken, required String refreshToken}) =>
     RustLib.instance.api.crateApiImCoreUpdateTokens(
         accessToken: accessToken, refreshToken: refreshToken);
 
+/// 启动 WebSocket 连接和 IM 后台任务。
+///
+/// Token 已通过 core_update_tokens 注入到 GLOBAL_STORAGE，此处不再需要传入。
+/// - `url`: WebSocket 服务端地址，如 "ws://127.0.0.1:8080/ws"
+/// - `client_id`: 设备唯一标识（UUID v4）
+/// - `sync_chat_history`: 是否同步近期聊天记录
 Future<void> coreStartWs(
         {required String url,
-        required String token,
-        required String clientId}) =>
-    RustLib.instance.api
-        .crateApiImCoreStartWs(url: url, token: token, clientId: clientId);
+        required String clientId,
+        required bool syncChatHistory}) =>
+    RustLib.instance.api.crateApiImCoreStartWs(
+        url: url, clientId: clientId, syncChatHistory: syncChatHistory);
 
 Stream<String> coreSubscribeImEvents() =>
     RustLib.instance.api.crateApiImCoreSubscribeImEvents();

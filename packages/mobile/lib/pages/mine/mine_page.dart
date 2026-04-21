@@ -22,10 +22,10 @@ class _MinePageState extends State<MinePage> with AutomaticKeepAliveClientMixin 
     switch (name) {
       case '设置':
         rust_api.coreLogout().then((_) {
-          ImLoginManager.loginOut(context);
+          ImLoginManager.logout();
         }).catchError((e) {
           debugPrint('coreLogout failed: $e');
-          ImLoginManager.loginOut(context);
+          ImLoginManager.logout();
         });
         break;
       case '服务':

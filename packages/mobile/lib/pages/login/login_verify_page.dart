@@ -31,72 +31,63 @@ class _LoginVerifyPageState extends State<LoginVerifyPage> {
       return;
     }
     
-    // 显示 loading 或弹窗
     try {
       String resp;
       if (isPasswordMode) {
-        resp = await rust_api.coreLoginWithPwd(account: widget.mobile, password: _tC.text, region: widget.areaCode);
+        resp = await rust_api.coreLoginWithPwd(
+          account: widget.mobile,
+          password: _tC.text,
+          region: widget.areaCode,
+        );
       } else {
-        resp = await rust_api.coreLoginOrRegisterByCode(mobile: widget.mobile, code: _tC.text, region: widget.areaCode);
+        resp = await rust_api.coreLoginOrRegisterByCode(
+          mobile: widget.mobile,
+          code: _tC.text,
+          region: widget.areaCode,
+        );
       }
       
-      // 解析出来的 JSON
+      // 解析响应：统一获取 user_info 和 token（兼容两种响应结构）
       final Map<String, dynamic> data = json.decode(resp) as Map<String, dynamic>;
       
-      // Attempt to extract login_info (if LoginOrRegisterResponse) or user_info directly (if LoginResponse)
-      Map<String, dynamic>? userInfo;
+      // LoginOrRegisterResponse 把 login_info 嵌套其中，提升到顶层
+      Map<String, dynamic> topData = data;
       if (data.containsKey('login_info')) {
-        var loginInfo = data['login_info'] as Map<String, dynamic>;
-        userInfo = loginInfo['user_info'] as Map<String, dynamic>?;
-        if (loginInfo.containsKey('access_token')) {
-          data['access_token'] = loginInfo['access_token'];
-        }
-        if (loginInfo.containsKey('refresh_token')) {
-          data['refresh_token'] = loginInfo['refresh_token'];
-        }
-      } else {
-        userInfo = data['user_info'] as Map<String, dynamic>?;
+        topData = {...data, ...(data['login_info'] as Map<String, dynamic>)};
       }
       
-      String realAccount = widget.mobile;
-      String? nickName;
-      String? avatar;
-      if (userInfo != null) {
-        realAccount = userInfo['id']?.toString() ?? widget.mobile;
-        nickName = userInfo['nickname']?.toString();
-        avatar = userInfo['avatar']?.toString();
-        await SharedUtil.instance.saveString(Keys.account, realAccount);
-        if (nickName != null) {
-          await SharedUtil.instance.saveString(Keys.nickName, nickName);
-        }
-        if (avatar != null) {
-          await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
-        }
-      } else {
-        await SharedUtil.instance.saveString(Keys.account, widget.mobile);
-      }
+      final userInfo = topData['user_info'] as Map<String, dynamic>?;
+      final String userId    = userInfo?['id']?.toString() ?? widget.mobile;
+      final String? nickName = userInfo?['nickname']?.toString();
+      final String? avatar   = userInfo?['avatar']?.toString();
+
+      // 持久化用户 UI 信息 + 标记已登录
+      await SharedUtil.instance.saveBoolean(Keys.hasLogged, true);
+      await SharedUtil.instance.saveString(Keys.account, userId);
+      if (nickName != null) await SharedUtil.instance.saveString(Keys.nickName, nickName);
+      if (avatar   != null) await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
       
+      // 持久化 Token 到 SharedPreferences（作为冷启动备份）
+      final String access  = topData['access_token']  as String? ?? '';
+      final String refresh = topData['refresh_token'] as String? ?? '';
+      if (access.isNotEmpty) {
+        await SharedUtil.instance.saveString('access_token', access);
+        await SharedUtil.instance.saveString('refresh_token', refresh);
+      }
+
+      // 更新内存中的 GlobalModel
       try {
         final model = Provider.of<GlobalModel>(context, listen: false);
-        model.account = realAccount;
+        model.account = userId;
         if (nickName != null) model.nickName = nickName;
-        if (avatar != null) model.avatar = avatar;
+        if (avatar   != null) model.avatar = avatar;
         model.refresh();
       } catch (e) {
         debugPrint('GlobalModel refresh failed: $e');
       }
 
-      if (data.containsKey('access_token')) {
-        await SharedUtil.instance.saveString('access_token', data['access_token'] as String);
-      }
-      if (data.containsKey('refresh_token')) {
-        await SharedUtil.instance.saveString('refresh_token', data['refresh_token'] as String);
-      }
-      
-      await SharedUtil.instance.saveBoolean('sync_chat_history', syncChatHistory);
-      
-      await ImLoginManager.login(realAccount, context);
-      // but in case it's decoupled:
+      // 启动 WS 会话（Token 已在 Rust GLOBAL_STORAGE 中）
+      await ImLoginManager.startWs(syncChatHistory: syncChatHistory);
       showToast('登录成功');
       Get.offAll(const RootPage());
     } catch (e) {

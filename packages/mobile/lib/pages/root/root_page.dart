@@ -28,8 +28,14 @@ class _RootPageState extends State<RootPage> {
     ifBrokenNetwork();
     updateApi(context);
     
-    // 如果直接进入主页(有本地登录态)，必须自动重连 WS 并同步 Token 到 Rust 内存
-    ImLoginManager.login("auto", context);
+    // 如果直接进入主页（有本地登录态），Token 已在 main.dart 中注入到 Rust GLOBAL_STORAGE，
+    // 此处直接启动 WS 会话即可，无需再传 token
+    _autoStartWs();
+  }
+
+  Future<void> _autoStartWs() async {
+    final syncChatHistory = await SharedUtil.instance.getBoolean('sync_chat_history') ?? true;
+    await ImLoginManager.startWs(syncChatHistory: syncChatHistory);
   }
 
   Future<void> ifBrokenNetwork() async {

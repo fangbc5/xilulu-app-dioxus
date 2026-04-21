@@ -41,6 +41,8 @@ pub async fn core_login_with_pwd(
             let _ = GLOBAL_STORAGE
                 .set("refresh_token", &resp.refresh_token)
                 .await;
+            // 同时保存 user_id，供 WS 同步任务读取 my_uid
+            let _ = GLOBAL_STORAGE.set("user_id", &resp.user_info.id).await;
             serde_json::to_string(&resp).map_err(|e| e.to_string())
         }
         Err(e) => Err(e.to_string()),
@@ -65,6 +67,9 @@ pub async fn core_login_or_register_by_code(
                 .await;
             let _ = GLOBAL_STORAGE
                 .set("refresh_token", &resp.login_info.refresh_token)
+                .await;
+            let _ = GLOBAL_STORAGE
+                .set("user_id", &resp.login_info.user_info.id)
                 .await;
             serde_json::to_string(&resp).map_err(|e| e.to_string())
         }

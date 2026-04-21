@@ -26,11 +26,20 @@ void main() async {
   
   await coreInitSdk(dbPath: dbPath);
   
+  // 冷启动 / hot restart 种子注入：
+  // 将 SharedPreferences 里持久化的 Token 同步到 Rust GLOBAL_STORAGE，
+  // 确保 Rust 侧的 API Client 在任何情况下都持有有效 Token。
+  await StorageManager.init(); // 提前初始化，确保 SharedUtil 可用
+  final savedAccess  = await SharedUtil.instance.getString('access_token')  ?? '';
+  final savedRefresh = await SharedUtil.instance.getString('refresh_token') ?? '';
+  if (savedAccess.isNotEmpty) {
+    await coreUpdateTokens(accessToken: savedAccess, refreshToken: savedRefresh);
+  }
+  
   /// 数据初始化
   await Data.initData();
 
-  /// 配置初始化
-  await StorageManager.init();
+  // StorageManager 已在 Token 种子注入时初始化，无需重复调用
 
   /// APP入口并配置Provider
   runApp(ProviderConfig.getInstance().getGlobal(MyApp()));

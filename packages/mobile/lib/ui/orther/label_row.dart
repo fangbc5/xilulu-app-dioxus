@@ -15,6 +15,8 @@ class LabelRow extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final Widget? headW;
   final double lineWidth;
+  final Color labelTextColor;
+  final Color? valueTextColor;
 
   LabelRow({
     this.label,
@@ -30,6 +32,8 @@ class LabelRow extends StatelessWidget {
     this.headW,
     this.lineWidth = mainLineWidth,
     this.isTopAlign = false,
+    this.labelTextColor = const Color(0xFF333333),
+    this.valueTextColor,
   });
 
   final bool isTopAlign;
@@ -65,14 +69,14 @@ class LabelRow extends StatelessWidget {
                       width: labelWidth,
                       child: Text(
                         label ?? '',
-                        style: TextStyle(color: Color(0xFF333333), fontSize: 16.0, fontWeight: FontWeight.w400),
+                        style: TextStyle(color: labelTextColor, fontSize: 16.0, fontWeight: FontWeight.w400),
                       ),
                     ),
                     if (value != null)
                       Text(
                         value!,
                         style: TextStyle(
-                          color: mainTextColor.withOpacity(0.7),
+                          color: valueTextColor ?? Color(0xFF333333),
                         ),
                       ),
                     Spacer(),

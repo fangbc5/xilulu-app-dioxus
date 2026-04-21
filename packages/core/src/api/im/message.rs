@@ -269,6 +269,7 @@ pub async fn pull_remote_messages(
         .map_err(|e| e.to_string())?;
 
     let mut messages = Vec::new();
+    let now_ms = chrono::Utc::now().timestamp_millis();
 
     for rm in remote_msgs {
         let xmsg = XMessage {

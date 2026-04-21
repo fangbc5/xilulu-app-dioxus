@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import 'package:wechat_flutter/im/info_handle.dart';
+import 'package:wechat_flutter/im/friend_handle.dart';
 import 'package:wechat_flutter/pages/mine/code_page.dart';
 import 'package:wechat_flutter/pages/more/add_friend_details.dart';
 import 'package:wechat_flutter/pages/root/user_page.dart';
@@ -191,20 +192,18 @@ class _AddFriendPageState extends State<AddFriendPage> {
 
   // 搜索好友
   Future search(String userName) async {
-    final List<XUserInfo> data = await getUsersProfile([userName]);
+    final List<XUserInfo> data = await searchUser(userName);
     if (data.isEmpty) {
-      showToast('该用户不存在【可搜"188"或"18888"试试】');
+      showToast('该用户不存在');
       return;
     }
     setState(() {
-      if (Platform.isIOS) {
-        XUserInfo model = data[0];
-        if (model.nickName != null) {
-          Get.to<void>(new AddFriendsDetails('search', model.userId,
-              model.faceUrl ?? '', model.nickName ?? '', model.gender ?? 0));
-        } else {
-          isResult = true;
-        }
+      XUserInfo model = data[0];
+      if (model.nickName != null) {
+        Get.to<void>(new AddFriendsDetails('search', model.userId ?? '',
+            model.faceUrl ?? '', model.nickName ?? '', model.gender ?? 0));
+      } else {
+        isResult = true;
       }
     });
   }

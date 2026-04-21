@@ -5,13 +5,13 @@ import 'package:wechat_flutter/tools/wechat_flutter.dart';
 class PersonCard extends StatelessWidget {
   final String? imageUrl;
   final String name;
-  final String area;
+  final String? area;
   final int gender;
 
   PersonCard({
     this.imageUrl,
     required this.name,
-    required this.area,
+    this.area,
     this.gender = 0,
   });
 
@@ -58,19 +58,23 @@ class PersonCard extends StatelessWidget {
                 name,
                 style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.w500),
               ),
-              SizedBox(width: 10),
-              Image.asset(
-                'assets/images/Contact_${gender == 0 ? 'Female' : 'Male'}.webp',
-                fit: BoxFit.cover,
-                width: 20.0,
-              ),
+              if (gender != 0) ...[
+                SizedBox(width: 10),
+                Image.asset(
+                  'assets/images/Contact_${gender == 1 ? 'Male' : 'Female'}.webp',
+                  fit: BoxFit.cover,
+                  width: 20.0,
+                ),
+              ],
             ],
           ),
-          SizedBox(height: mainSpace * 0.3),
-          Text(
-            '地区： $area',
-            style: TextStyle(color: labelTextColor, fontSize: 13),
-          ),
+          if (strNoEmpty(area)) ...[
+            SizedBox(height: mainSpace * 0.3),
+            Text(
+              '地区： ${area ?? ''}',
+              style: TextStyle(color: labelTextColor, fontSize: 13),
+            ),
+          ],
         ],
       ),
     ];
