@@ -175,6 +175,16 @@ class ImLoginManager {
       }
       return;
     }
+
+    // WS 连接状态变更 → 通知 UI 更新连接指示条
+    if (decoded.containsKey('OnConnectionStatusChanged')) {
+      final status = decoded['OnConnectionStatusChanged'] as String? ?? '';
+      if (status.isNotEmpty) {
+        eventBusNewMsg.value = EventBusNewMsg('CONNECTION_STATUS_$status');
+        Notice.send(WeChatActions.connectionStatus(), status);
+      }
+      return;
+    }
   }
 
   /// 处理字符串类型的 WS 事件（枚举序列化）
@@ -182,6 +192,12 @@ class ImLoginManager {
     if (event == 'OnConversationListUpdated') {
       eventBusNewMsg.value = EventBusNewMsg('GLOBAL_SYNC_COMPLETE');
       Notice.send(WeChatActions.msg(), '');
+    } else if (event == 'OnSyncStarted') {
+      // 增量同步开始 → UI 显示"收取中..."
+      Notice.send(WeChatActions.connectionStatus(), 'syncing');
+    } else if (event == 'OnSyncCompleted') {
+      // 增量同步完成 → UI 恢复正常
+      Notice.send(WeChatActions.connectionStatus(), 'connected');
     }
   }
 

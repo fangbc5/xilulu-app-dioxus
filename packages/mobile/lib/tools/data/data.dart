@@ -11,6 +11,9 @@ class WeChatActions {
   static String voiceImg() => 'voiceImg';
 
   static String user() => 'user';
+
+  /// WS 连接状态变更事件通道
+  static String connectionStatus() => 'connectionStatus';
 }
 
 class Data {

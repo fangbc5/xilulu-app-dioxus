@@ -10,7 +10,7 @@ use tracing::{error, info, warn};
 
 use super::models::{
     WsBaseResp, WsStatus, HEARTBEAT_INTERVAL, INITIAL_RECONNECT_DELAY, MAX_RECONNECT_DELAY,
-    INTERNAL_WS_RECONNECTED,
+    INTERNAL_WS_RECONNECTED, INTERNAL_WS_STATUS_CHANGED,
 };
 
 use crate::api::client::{ApiResponse, BASE_URL};
@@ -178,6 +178,10 @@ impl WsClient {
                 let mut s = status.lock().await;
                 *s = WsStatus::Connecting;
             }
+            let _ = event_tx.send(WsBaseResp {
+                msg_type: INTERNAL_WS_STATUS_CHANGED,
+                data: serde_json::json!({"status": "connecting"}),
+            });
 
             info!("[WS] Connecting (Attempt: {})", attempts);
 
@@ -204,6 +208,10 @@ impl WsClient {
                 let mut s = status.lock().await;
                 *s = WsStatus::Connected;
             }
+            let _ = event_tx.send(WsBaseResp {
+                msg_type: INTERNAL_WS_STATUS_CHANGED,
+                data: serde_json::json!({"status": "connected"}),
+            });
 
             // 重连成功 → 通知上层触发增量同步，补齐断线期间丢失的数据
             if attempts > 0 {
@@ -302,6 +310,10 @@ impl WsClient {
                 let mut s = status.lock().await;
                 *s = WsStatus::Reconnecting;
             }
+            let _ = event_tx.send(WsBaseResp {
+                msg_type: INTERNAL_WS_STATUS_CHANGED,
+                data: serde_json::json!({"status": "reconnecting"}),
+            });
             Self::delay_reconnect(&mut retry_delay, &mut attempts).await;
         }
     }

@@ -13,6 +13,7 @@ import 'package:wechat_flutter/pages/root/root_tabbar.dart';
 import 'package:wechat_flutter/tools/wechat_flutter.dart';
 
 import 'package:wechat_flutter/im/login_handle.dart';
+import 'package:wechat_flutter/src/rust/api/im.dart' as rust_api;
 
 class RootPage extends StatefulWidget {
   const RootPage({super.key});
@@ -21,16 +22,32 @@ class RootPage extends StatefulWidget {
   _RootPageState createState() => _RootPageState();
 }
 
-class _RootPageState extends State<RootPage> {
+class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     ifBrokenNetwork();
     updateApi(context);
     
     // 如果直接进入主页（有本地登录态），Token 已在 main.dart 中注入到 Rust GLOBAL_STORAGE，
     // 此处直接启动 WS 会话即可，无需再传 token
     _autoStartWs();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// App 前后台切换：回到前台时触发增量同步
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('📱 App resumed, triggering foreground sync...');
+      rust_api.coreOnAppForeground();
+    }
   }
 
   Future<void> _autoStartWs() async {
@@ -48,10 +65,6 @@ class _RootPageState extends State<RootPage> {
             result.contains(ConnectivityResult.wifi)) {
           final currentUser = await SharedUtil.instance.getString(Keys.account);
           log('ConnectivityResult::currentUser::$currentUser');
-          // if (currentUser == '' ) {
-          // final account = await SharedUtil.instance.getString(Keys.account);
-          // im.imAutoLogin(account);
-          // }
           await SharedUtil.instance.saveBoolean(Keys.brokenNetwork, false);
         }
       });

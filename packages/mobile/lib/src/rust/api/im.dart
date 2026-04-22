@@ -41,6 +41,10 @@ Future<void> coreStartWs(
 Stream<String> coreSubscribeImEvents() =>
     RustLib.instance.api.crateApiImCoreSubscribeImEvents();
 
+/// Flutter 侧 App 回到前台时调用，触发增量同步确保数据最新
+Future<void> coreOnAppForeground() =>
+    RustLib.instance.api.crateApiImCoreOnAppForeground();
+
 Future<String> coreSendTextMessage(
         {required PlatformInt64 roomId,
         required String content,

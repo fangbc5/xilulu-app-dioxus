@@ -54,4 +54,10 @@ pub enum XEvent {
     OnConversationListUpdated,
     OnTotalUnreadCountChanged(i32),
     OnChatLatestMessageUpdated(XMessage),
+    /// WS 连接状态变更："connected" | "connecting" | "reconnecting"
+    OnConnectionStatusChanged(String),
+    /// 增量同步开始（UI 显示"收取中..."）
+    OnSyncStarted,
+    /// 增量同步完成（UI 隐藏"收取中..."）
+    OnSyncCompleted,
 }

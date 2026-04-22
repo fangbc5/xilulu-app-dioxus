@@ -9,6 +9,7 @@ import 'package:wechat_flutter/ui/chat/my_conversation_view.dart';
 import 'package:wechat_flutter/ui/edit/text_span_builder.dart';
 import 'package:wechat_flutter/ui/view/indicator_page_view.dart';
 import 'package:wechat_flutter/ui/view/pop_view.dart';
+import 'package:wechat_flutter/ui/view/connection_status_bar.dart';
 
 import '../../tools/event/im_event.dart';
 import 'package:wechat_flutter/im/model/im_models.dart';
@@ -22,6 +23,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
   List<XConversation?> _chatData = [];
+  String _connectionStatus = 'connected';
 
   Offset? tapPos;
   TextSpanBuilder _builder = TextSpanBuilder();
@@ -124,6 +126,15 @@ class _HomePageState extends State<HomePage>
          getChatData();
       }
     });
+
+    // 监听 WS 连接状态变更
+    Notice.addListener(WeChatActions.connectionStatus(), (v) {
+      if (v is String && mounted) {
+        setState(() {
+          _connectionStatus = v;
+        });
+      }
+    });
   }
 
   bool modelIsGroup(XConversation m) {
@@ -164,44 +175,51 @@ class _HomePageState extends State<HomePage>
     }
     return Container(
       color: const Color(AppColors.BackgroundColor),
-      child: ScrollConfiguration(
-        behavior: MyBehavior(),
-        child: ListView.builder(
-          itemBuilder: (BuildContext context, int index) {
-            final XConversation? model = _chatData[index];
-            if (model == null) {
-              return Container();
-            }
+      child: Column(
+        children: [
+          ConnectionStatusBar(status: _connectionStatus),
+          Expanded(
+            child: ScrollConfiguration(
+              behavior: MyBehavior(),
+              child: ListView.builder(
+                itemBuilder: (BuildContext context, int index) {
+                  final XConversation? model = _chatData[index];
+                  if (model == null) {
+                    return Container();
+                  }
 
-            return InkWell(
-              onTap: () {
-                Get.to<void>(ChatPage(
-                    id: model.peerId ?? model.conversationId,
-                    title: model.showName ?? model.conversationId,
-                    type: model.type));
-              },
-              onTapDown: (TapDownDetails details) {
-                tapPos = details.globalPosition;
-              },
-              onLongPress: () {
-                _showMenu(
-                  context,
-                  tapPos!,
-                  model.type == ConversationType.group ? 2 : 1,
-                  model.conversationId,
-                );
-              },
-              child: MyConversationView(
-                imageUrl: model.faceUrl,
-                title: model.showName ?? '',
-                content: model.lastMessage?.content,
-                time: timeView(model.lastMessage?.timestamp ?? 0),
-                isBorder: model.showName != _chatData[0]?.showName,
+                  return InkWell(
+                    onTap: () {
+                      Get.to<void>(ChatPage(
+                          id: model.peerId ?? model.conversationId,
+                          title: model.showName ?? model.conversationId,
+                          type: model.type));
+                    },
+                    onTapDown: (TapDownDetails details) {
+                      tapPos = details.globalPosition;
+                    },
+                    onLongPress: () {
+                      _showMenu(
+                        context,
+                        tapPos!,
+                        model.type == ConversationType.group ? 2 : 1,
+                        model.conversationId,
+                      );
+                    },
+                    child: MyConversationView(
+                      imageUrl: model.faceUrl,
+                      title: model.showName ?? '',
+                      content: model.lastMessage?.content,
+                      time: timeView(model.lastMessage?.timestamp ?? 0),
+                      isBorder: model.showName != _chatData[0]?.showName,
+                    ),
+                  );
+                },
+                itemCount: _chatData.length ?? 1,
               ),
-            );
-          },
-          itemCount: _chatData.length ?? 1,
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -209,6 +227,7 @@ class _HomePageState extends State<HomePage>
   @override
   void dispose() {
     Notice.removeListenerByEvent(WeChatActions.msg());
+    Notice.removeListenerByEvent(WeChatActions.connectionStatus());
     super.dispose();
     canCelListener();
   }

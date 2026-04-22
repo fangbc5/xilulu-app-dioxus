@@ -93,3 +93,5 @@ pub const INITIAL_RECONNECT_DELAY: Duration = Duration::from_millis(1000);
 /// 内部保留消息类型（不来自服务端，仅用于 SDK 内部事件驱动）
 /// WS 重连成功后发送此事件，触发增量同步补齐断线期间丢失的数据
 pub const INTERNAL_WS_RECONNECTED: i32 = -100;
+/// WS 连接状态变更事件，data 中携带 {"status": "connecting" | "connected" | "reconnecting"}
+pub const INTERNAL_WS_STATUS_CHANGED: i32 = -101;

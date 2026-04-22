@@ -18,6 +18,16 @@ lazy_static::lazy_static! {
     pub static ref GLOBAL_WS_CLIENT: tokio::sync::RwLock<Option<Arc<WsClient>>> = tokio::sync::RwLock::new(None);
 }
 
+#[flutter_rust_bridge::frb(init)]
+pub fn init_app() {
+    // 默认通过 flutter_rust_bridge 控制台输出和 panic 拦截
+    flutter_rust_bridge::setup_default_user_utils();
+    // 初始化 Tracing 并定向到标准输出流，Flutter Run 会在控制台捕获这些输出
+    let _ = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .try_init();
+}
+
 pub async fn core_init_sdk(db_path: String) -> Result<(), String> {
     let db_url = format!("sqlite://{}", db_path);
     let manager = xilulu_core::db::DbManager::new(&db_url)
@@ -301,6 +311,15 @@ pub async fn core_start_ws(
             else if msg.msg_type == xilulu_core::ws::models::INTERNAL_WS_RECONNECTED {
                 tracing::info!("[WS] 重连成功，触发增量同步与消息重发...");
                 if let Some(db) = &*GLOBAL_DB.read().await {
+                    // 通知 UI: 收取中...
+                    if let Ok(guard) = FLUTTER_STREAM.lock() {
+                        if let Some(sink) = guard.as_ref() {
+                            let _ = sink.add(
+                                serde_json::to_string(&XEvent::OnSyncStarted).unwrap(),
+                            );
+                        }
+                    }
+
                     // 1. 增量同步，补齐断线期间丢失的数据
                     if let Err(e) = xilulu_core::api::im::sync::execute_sync(
                         &crate::api::GLOBAL_API_CLIENT,
@@ -322,13 +341,58 @@ pub async fn core_start_ws(
                         tracing::error!("重发队列消费失败: {}", e);
                     }
 
-                    // 3. 通知 Flutter UI 全面刷新
+                    // 3. 通知 Flutter UI 全面刷新 + 收取完成
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
                             let _ = sink.add(
                                 serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
                             );
+                            let _ = sink.add(
+                                serde_json::to_string(&XEvent::OnSyncCompleted).unwrap(),
+                            );
                         }
+                    }
+                }
+            }
+            // WS 连接状态变更 → 转发给 Flutter UI 显示连接指示条
+            else if msg.msg_type == xilulu_core::ws::models::INTERNAL_WS_STATUS_CHANGED {
+                if let Some(status_str) = msg.data.get("status").and_then(|v| v.as_str()) {
+                    if let Ok(guard) = FLUTTER_STREAM.lock() {
+                        if let Some(sink) = guard.as_ref() {
+                            let _ = sink.add(
+                                serde_json::to_string(
+                                    &XEvent::OnConnectionStatusChanged(status_str.to_string()),
+                                )
+                                .unwrap(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 7. 定时增量同步兜底（每 3 分钟），即使 WS 正常也做一次轻量同步确保数据不过时
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(180));
+        // 跳过首次立即触发（首次同步已由步骤 5 执行）
+        interval.tick().await;
+        loop {
+            interval.tick().await;
+            if let Some(db) = &*GLOBAL_DB.read().await {
+                tracing::info!("[SYNC] 定时兜底同步触发");
+                let _ = xilulu_core::api::im::sync::execute_sync(
+                    &crate::api::GLOBAL_API_CLIENT,
+                    db,
+                    my_uid,
+                )
+                .await;
+                // 同步完成后通知 Flutter 刷新
+                if let Ok(guard) = FLUTTER_STREAM.lock() {
+                    if let Some(sink) = guard.as_ref() {
+                        let _ = sink.add(
+                            serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
+                        );
                     }
                 }
             }
@@ -342,6 +406,58 @@ pub fn core_subscribe_im_events(sink: StreamSink<String>) {
     if let Ok(mut guard) = FLUTTER_STREAM.lock() {
         *guard = Some(sink);
     }
+}
+
+/// Flutter 侧 App 回到前台时调用，触发增量同步确保数据最新
+pub async fn core_on_app_foreground() -> Result<(), String> {
+    let my_uid = crate::api::GLOBAL_STORAGE
+        .get("user_id")
+        .await
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0);
+
+    if my_uid == 0 {
+        return Ok(()); // 未登录，不同步
+    }
+
+    if let Some(db) = &*GLOBAL_DB.read().await {
+        tracing::info!("[SYNC] App 回到前台，触发增量同步");
+
+        // 通知 UI: 收取中...
+        if let Ok(guard) = FLUTTER_STREAM.lock() {
+            if let Some(sink) = guard.as_ref() {
+                let _ = sink.add(
+                    serde_json::to_string(&XEvent::OnSyncStarted).unwrap(),
+                );
+            }
+        }
+
+        if let Err(e) = xilulu_core::api::im::sync::execute_sync(
+            &crate::api::GLOBAL_API_CLIENT,
+            db,
+            my_uid,
+        )
+        .await
+        {
+            tracing::error!("前台恢复同步失败: {}", e);
+        }
+
+        // 通知 Flutter 刷新 + 收取完成
+        if let Ok(guard) = FLUTTER_STREAM.lock() {
+            if let Some(sink) = guard.as_ref() {
+                let _ = sink.add(
+                    serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
+                );
+                let _ = sink.add(
+                    serde_json::to_string(&XEvent::OnSyncCompleted).unwrap(),
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn core_send_text_message(
