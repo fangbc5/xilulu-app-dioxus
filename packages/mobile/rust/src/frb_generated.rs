@@ -1292,13 +1292,20 @@ fn wire__crate__api__im__core_update_tokens_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_access_token = <String>::sse_decode(&mut deserializer);
             let api_refresh_token = <String>::sse_decode(&mut deserializer);
+            let api_access_expires_at = <Option<i64>>::sse_decode(&mut deserializer);
+            let api_refresh_expires_at = <Option<i64>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, ()>(
                     (move || async move {
                         let output_ok = Result::<_, ()>::Ok({
-                            crate::api::im::core_update_tokens(api_access_token, api_refresh_token)
-                                .await;
+                            crate::api::im::core_update_tokens(
+                                api_access_token,
+                                api_refresh_token,
+                                api_access_expires_at,
+                                api_refresh_expires_at,
+                            )
+                            .await;
                         })?;
                         Ok(output_ok)
                     })()

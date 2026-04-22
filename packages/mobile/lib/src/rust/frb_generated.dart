@@ -180,7 +180,10 @@ abstract class RustLibApi extends BaseApi {
       String? notification});
 
   Future<void> crateApiImCoreUpdateTokens(
-      {required String accessToken, required String refreshToken});
+      {required String accessToken,
+      required String refreshToken,
+      PlatformInt64? accessExpiresAt,
+      PlatformInt64? refreshExpiresAt});
 
   Future<String> crateApiImCoreUpdateUserInfo(
       {required PlatformInt64 userId,
@@ -1060,12 +1063,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<void> crateApiImCoreUpdateTokens(
-      {required String accessToken, required String refreshToken}) {
+      {required String accessToken,
+      required String refreshToken,
+      PlatformInt64? accessExpiresAt,
+      PlatformInt64? refreshExpiresAt}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(accessToken, serializer);
         sse_encode_String(refreshToken, serializer);
+        sse_encode_opt_box_autoadd_i_64(accessExpiresAt, serializer);
+        sse_encode_opt_box_autoadd_i_64(refreshExpiresAt, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 33, port: port_);
       },
@@ -1074,14 +1082,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: null,
       ),
       constMeta: kCrateApiImCoreUpdateTokensConstMeta,
-      argValues: [accessToken, refreshToken],
+      argValues: [accessToken, refreshToken, accessExpiresAt, refreshExpiresAt],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiImCoreUpdateTokensConstMeta => const TaskConstMeta(
         debugName: "core_update_tokens",
-        argNames: ["accessToken", "refreshToken"],
+        argNames: [
+          "accessToken",
+          "refreshToken",
+          "accessExpiresAt",
+          "refreshExpiresAt"
+        ],
       );
 
   @override

@@ -37,6 +37,7 @@ struct RefreshTokenReq<'a> {
 struct RefreshTokenResp {
     access_token: String,
     refresh_token: String,
+    expires_in: i64,
 }
 
 #[derive(Clone)]
@@ -125,12 +126,17 @@ impl ApiClient {
         
         let new_tokens = api_resp.data?;
         tracing::info!("Token refresh successful. Updating storage and retrying request.");
+
+        // 保存新token和过期时间
+        let now = chrono::Utc::now().timestamp();
         let _ = self.storage.set("access_token", &new_tokens.access_token).await;
         let _ = self.storage.set("refresh_token", &new_tokens.refresh_token).await;
-        
+        let _ = self.storage.set("access_expires_at", &(now + new_tokens.expires_in).to_string()).await;
+        // 注意：refresh_expires_at 不更新，因为 refresh_token 未变化
+
         let mut clone = req_clone?;
         clone = clone.bearer_auth(&new_tokens.access_token);
-        
+
         clone.send().await.ok()
     }
 

@@ -15,9 +15,15 @@ Future<void> coreInitSdk({required String dbPath}) =>
 /// 将 Flutter 侧（SharedPreferences）持久化的 Token 注入到 Rust GLOBAL_STORAGE。
 /// 应在 main.dart 的 coreInitSdk 之后立即调用，以恢复上次登录状态。
 Future<void> coreUpdateTokens(
-        {required String accessToken, required String refreshToken}) =>
+        {required String accessToken,
+        required String refreshToken,
+        PlatformInt64? accessExpiresAt,
+        PlatformInt64? refreshExpiresAt}) =>
     RustLib.instance.api.crateApiImCoreUpdateTokens(
-        accessToken: accessToken, refreshToken: refreshToken);
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        accessExpiresAt: accessExpiresAt,
+        refreshExpiresAt: refreshExpiresAt);
 
 /// 启动 WebSocket 连接和 IM 后台任务。
 ///

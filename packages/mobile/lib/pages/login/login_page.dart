@@ -26,8 +26,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> initEdit() async {
-    final String? user = await SharedUtil.instance.getString(Keys.account);
-    _tC.text = user ?? '';
+    // 之前直接读取 Keys.account 会导致回显用户数字 ID
+    // 现修复为默认不回填，或后续存取真实的手机号字段
   }
 
   Widget bottomItem(String item) {
@@ -99,39 +99,42 @@ class _LoginPageState extends State<LoginPage> {
           margin: const EdgeInsets.symmetric(horizontal: 25.0),
           decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5))),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              SizedBox(
-                width: Get.width * 0.25,
-                child: Text(
-                  S.of(context).phoneNumber,
-                  style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: <Widget>[
+                SizedBox(
+                  width: Get.width * 0.25,
+                  child: Text(
+                    S.of(context).phoneNumber,
+                    style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w400),
+                  ),
                 ),
-              ),
-              Text(
-                '${RegExp(r'\((.*?)\)').firstMatch(model.area)?.group(1) ?? '+86'} ',
-                style: const TextStyle(fontSize: 16.0, color: Colors.grey),
-              ),
-              Expanded(
+                Text(
+                  '${RegExp(r'\((.*?)\)').firstMatch(model.area)?.group(1) ?? '+86'} ',
+                  style: const TextStyle(fontSize: 16.0, color: Colors.grey),
+                ),
+                Expanded(
                   child: TextField(
-                controller: _tC,
-                style: const TextStyle(textBaseline: TextBaseline.alphabetic, fontSize: 16.0),
-                keyboardType: TextInputType.phone,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter(RegExp(r'[0-9]'), allow: true)
-                ],
-                decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    hintText: '请填写手机号码',
-                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
-                    border: InputBorder.none),
-                onChanged: (String text) {
-                  setState(() {});
-                },
-              ))
-            ],
+                    controller: _tC,
+                    style: const TextStyle(textBaseline: TextBaseline.alphabetic, fontSize: 16.0),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter(RegExp(r'[0-9]'), allow: true)
+                    ],
+                    decoration: InputDecoration.collapsed(
+                      hintText: '请填写手机号码',
+                      hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5), fontSize: 16.0),
+                    ),
+                    onChanged: (String text) {
+                      setState(() {});
+                    },
+                  ),
+                )
+              ],
+            ),
           ),
         ),
         Padding(

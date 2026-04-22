@@ -48,13 +48,19 @@ class _LoginEmailPwdPageState extends State<LoginEmailPwdPage> {
       await SharedUtil.instance.saveString(Keys.account, userId);
       if (nickName != null) await SharedUtil.instance.saveString(Keys.nickName, nickName);
       if (avatar   != null) await SharedUtil.instance.saveString(Keys.faceUrl, avatar);
-      
-      // 持久化 Token 到 SharedPreferences（作为冷启动备份，TOKEN_REFRESHED 事件会持续更新）
+
+      // 持久化 Token 和过期时间到 SharedPreferences（作为冷启动备份）
       final String access  = data['access_token']  as String? ?? '';
       final String refresh = data['refresh_token'] as String? ?? '';
+      final int expiresIn = data['expires_in'] as int? ?? 900;
+      final int refreshExpiresIn = data['refresh_expires_in'] as int? ?? 604800;
+
       if (access.isNotEmpty) {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         await SharedUtil.instance.saveString('access_token', access);
         await SharedUtil.instance.saveString('refresh_token', refresh);
+        await SharedUtil.instance.saveInt('access_expires_at', now + expiresIn);
+        await SharedUtil.instance.saveInt('refresh_expires_at', now + refreshExpiresIn);
       }
 
       // 更新内存中的 GlobalModel

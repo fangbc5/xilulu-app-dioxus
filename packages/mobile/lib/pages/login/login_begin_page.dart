@@ -62,7 +62,6 @@ class _LoginBeginPageState extends State<LoginBeginPage> {
   @override
   void initState() {
     super.initState();
-    ImLoginManager.init(context);
   }
 
   @override

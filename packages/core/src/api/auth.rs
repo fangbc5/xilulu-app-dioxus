@@ -31,6 +31,8 @@ pub struct TenantInfo {
 pub struct LoginResponse {
     pub access_token: String,
     pub refresh_token: String,
+    pub expires_in: i64,
+    pub refresh_expires_in: i64,
     pub user_info: UserInfo,
     pub tenant_list: Option<Vec<TenantInfo>>,
 }

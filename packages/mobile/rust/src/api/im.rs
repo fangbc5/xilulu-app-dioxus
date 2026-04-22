@@ -31,7 +31,12 @@ pub async fn core_init_sdk(db_path: String) -> Result<(), String> {
 
 /// 将 Flutter 侧（SharedPreferences）持久化的 Token 注入到 Rust GLOBAL_STORAGE。
 /// 应在 main.dart 的 coreInitSdk 之后立即调用，以恢复上次登录状态。
-pub async fn core_update_tokens(access_token: String, refresh_token: String) {
+pub async fn core_update_tokens(
+    access_token: String,
+    refresh_token: String,
+    access_expires_at: Option<i64>,
+    refresh_expires_at: Option<i64>,
+) {
     use xilulu_core::port::StorageProvider;
     let _ = crate::api::GLOBAL_STORAGE
         .set("access_token", &access_token)
@@ -39,6 +44,18 @@ pub async fn core_update_tokens(access_token: String, refresh_token: String) {
     let _ = crate::api::GLOBAL_STORAGE
         .set("refresh_token", &refresh_token)
         .await;
+
+    // 同步过期时间
+    if let Some(access_exp) = access_expires_at {
+        let _ = crate::api::GLOBAL_STORAGE
+            .set("access_expires_at", &access_exp.to_string())
+            .await;
+    }
+    if let Some(refresh_exp) = refresh_expires_at {
+        let _ = crate::api::GLOBAL_STORAGE
+            .set("refresh_expires_at", &refresh_exp.to_string())
+            .await;
+    }
 }
 
 /// 启动 WebSocket 连接和 IM 后台任务。
@@ -113,13 +130,24 @@ pub async fn core_start_ws(
                 .ok()
                 .flatten()
                 .unwrap_or_default();
+            let expires_at_str = crate::api::GLOBAL_STORAGE
+                .get("access_expires_at")
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default();
 
             if !access.is_empty() {
+                // 计算剩余有效期（秒）
+                let now = chrono::Utc::now().timestamp();
+                let expires_at = expires_at_str.parse::<i64>().unwrap_or(now + 900);
+                let expires_in = (expires_at - now).max(0);
+
                 if let Ok(guard) = FLUTTER_STREAM.lock() {
                     if let Some(sink) = guard.as_ref() {
                         let json = format!(
-                            "{{\"TOKEN_REFRESHED\": {{\"access\": \"{}\", \"refresh\": \"{}\"}}}}",
-                            access, refresh
+                            "{{\"TOKEN_REFRESHED\": {{\"access\": \"{}\", \"refresh\": \"{}\", \"expires_in\": {}}}}}",
+                            access, refresh, expires_in
                         );
                         let _ = sink.add(json);
                     }
@@ -177,10 +205,8 @@ pub async fn core_start_ws(
                     let is_auth_failure = err_str.contains("UNAUTHORIZED");
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
-                            let _ = sink.add(format!(
-                                "{{\"DEBUG_SYNC\": \"Sync failed: {}\"}}",
-                                err_str
-                            ));
+                            let _ = sink
+                                .add(format!("{{\"DEBUG_SYNC\": \"Sync failed: {}\"}}", err_str));
                             if is_auth_failure {
                                 // Token 不可恢复，通知 Flutter 跳转登录页
                                 let _ = sink.add("{\"AUTH_EXPIRED\": true}".to_string());
@@ -257,7 +283,7 @@ pub async fn core_start_ws(
                     )
                     .await
                     {
-                        eprintln!("事件触发同步失败: {}", e);
+                        tracing::error!("事件触发同步失败: {}", e);
                     }
 
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
@@ -271,12 +297,46 @@ pub async fn core_start_ws(
                     }
                 }
             }
+            // WS 重连成功 → 立即触发增量同步 + 消费离线消息重发队列
+            else if msg.msg_type == xilulu_core::ws::models::INTERNAL_WS_RECONNECTED {
+                tracing::info!("[WS] 重连成功，触发增量同步与消息重发...");
+                if let Some(db) = &*GLOBAL_DB.read().await {
+                    // 1. 增量同步，补齐断线期间丢失的数据
+                    if let Err(e) = xilulu_core::api::im::sync::execute_sync(
+                        &crate::api::GLOBAL_API_CLIENT,
+                        db,
+                        my_uid,
+                    )
+                    .await
+                    {
+                        tracing::error!("重连同步失败: {}", e);
+                    }
+
+                    // 2. 消费离线消息重发队列
+                    if let Err(e) = xilulu_core::api::im::message::flush_sync_queue(
+                        &crate::api::GLOBAL_API_CLIENT,
+                        db,
+                    )
+                    .await
+                    {
+                        tracing::error!("重发队列消费失败: {}", e);
+                    }
+
+                    // 3. 通知 Flutter UI 全面刷新
+                    if let Ok(guard) = FLUTTER_STREAM.lock() {
+                        if let Some(sink) = guard.as_ref() {
+                            let _ = sink.add(
+                                serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
+                            );
+                        }
+                    }
+                }
+            }
         }
     });
 
     Ok(())
 }
-
 
 pub fn core_subscribe_im_events(sink: StreamSink<String>) {
     if let Ok(mut guard) = FLUTTER_STREAM.lock() {

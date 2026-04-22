@@ -10,6 +10,7 @@ use tracing::{error, info, warn};
 
 use super::models::{
     WsBaseResp, WsStatus, HEARTBEAT_INTERVAL, INITIAL_RECONNECT_DELAY, MAX_RECONNECT_DELAY,
+    INTERNAL_WS_RECONNECTED,
 };
 
 use crate::api::client::{ApiResponse, BASE_URL};
@@ -32,6 +33,7 @@ pub enum WsCmd {
 struct WsRefreshResp {
     access_token: String,
     refresh_token: String,
+    expires_in: i64,
 }
 
 impl WsClient {
@@ -109,8 +111,12 @@ impl WsClient {
         let data = api_resp.data?;
 
         // 写回 storage，让 HTTP 层也能受益
+        let now = chrono::Utc::now().timestamp();
         let _ = storage.set("access_token", &data.access_token).await;
         let _ = storage.set("refresh_token", &data.refresh_token).await;
+        let _ = storage.set("access_expires_at", &(now + data.expires_in).to_string()).await;
+        // 注意：refresh_expires_at 不更新，因为 refresh_token 未变化
+
         info!("[WS] Token refreshed proactively before reconnect.");
         Some(data.access_token)
     }
@@ -140,9 +146,26 @@ impl WsClient {
                 }
             }
 
-            // 2. 如果已经重连过 1 次以上，说明当前 token 可能过期，主动刷新
+            // 2. 如果已经重连过 1 次以上，检查 refresh_token 是否过期
             if attempts > 0 {
                 if let Some(st) = &storage {
+                    // 先检查 refresh_token 是否过期
+                    if let Ok(Some(refresh_expires_str)) = st.get("refresh_expires_at").await {
+                        if let Ok(refresh_expires_at) = refresh_expires_str.parse::<i64>() {
+                            let now = chrono::Utc::now().timestamp();
+                            if now >= refresh_expires_at {
+                                error!("[WS] Refresh token expired, stopping reconnection");
+                                // 发送 AUTH_EXPIRED 事件通知 Flutter 跳转登录页
+                                let _ = event_tx.send(WsBaseResp {
+                                    msg_type: -1,
+                                    data: serde_json::json!({"AUTH_EXPIRED": {}}),
+                                });
+                                return; // 停止重连循环
+                            }
+                        }
+                    }
+
+                    // refresh_token 未过期，尝试刷新 access_token
                     if let Some(new_tok) = Self::try_refresh_token_for_ws(&client, st).await {
                         current_token = new_tok;
                     }
@@ -181,6 +204,16 @@ impl WsClient {
                 let mut s = status.lock().await;
                 *s = WsStatus::Connected;
             }
+
+            // 重连成功 → 通知上层触发增量同步，补齐断线期间丢失的数据
+            if attempts > 0 {
+                info!("[WS] Reconnected after {} attempts, notifying sync...", attempts);
+                let _ = event_tx.send(WsBaseResp {
+                    msg_type: INTERNAL_WS_RECONNECTED,
+                    data: serde_json::json!({}),
+                });
+            }
+
             retry_delay = INITIAL_RECONNECT_DELAY;
             attempts = 0;
 

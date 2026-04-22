@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:wechat_flutter/config/provider_config.dart';
 import 'package:wechat_flutter/app.dart';
 import 'package:wechat_flutter/tools/data/data.dart';
+import 'package:wechat_flutter/tools/wechat_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'config/storage_manager.dart';
+import 'package:wechat_flutter/im/login_handle.dart';
 
 import 'src/rust/frb_generated.dart';
 import 'src/rust/api/im.dart';
@@ -26,15 +28,12 @@ void main() async {
   
   await coreInitSdk(dbPath: dbPath);
   
-  // 冷启动 / hot restart 种子注入：
-  // 将 SharedPreferences 里持久化的 Token 同步到 Rust GLOBAL_STORAGE，
-  // 确保 Rust 侧的 API Client 在任何情况下都持有有效 Token。
-  await StorageManager.init(); // 提前初始化，确保 SharedUtil 可用
-  final savedAccess  = await SharedUtil.instance.getString('access_token')  ?? '';
-  final savedRefresh = await SharedUtil.instance.getString('refresh_token') ?? '';
-  if (savedAccess.isNotEmpty) {
-    await coreUpdateTokens(accessToken: savedAccess, refreshToken: savedRefresh);
-  }
+  // 初始化全局事件监听器 (接收 AUTH_EXPIRED 等)
+  await ImLoginManager.initGlobalListener();
+
+  // 冷启动 / hot restart 种子注入与防线：
+  // 严格把控只有完全有效的 Token 才会注入底层，否则立拔当前本地缓存令其回落到登录
+  await ImLoginManager.checkAndInjectTokens();
   
   /// 数据初始化
   await Data.initData();

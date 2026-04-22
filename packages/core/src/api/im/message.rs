@@ -94,7 +94,6 @@ pub async fn send_text_message(
         }
         Err(e) => {
             tracing::error!("发送消息网络失败: {}", e);
-            println!("发送消息网络失败: {}", e);
 
             // 3b. 发送失败 → 更新为 local_status=2（失败），推入重发队列
             sqlx::query("UPDATE message SET local_status = 2, updated_at = ? WHERE msg_id = ?")
@@ -309,4 +308,98 @@ pub async fn pull_remote_messages(
     }
 
     Ok(messages)
+}
+
+/// 消费离线重发队列（WS 重连后调用）
+///
+/// 从 `sync_queue` 表中取出到期的待重发消息，逐条发送到服务端。
+/// 成功后删除队列项并更新本地消息状态；失败后递增 `retry_count`，
+/// 超过 3 次重试上限的消息将被丢弃（本地消息保持 `local_status=2` 失败态）。
+pub async fn flush_sync_queue(
+    api: &ApiClient,
+    db: &crate::db::DbManager,
+) -> Result<(), String> {
+    let now_ms = chrono::Utc::now().timestamp_millis();
+
+    let rows: Vec<(i64, String, i64)> = sqlx::query_as(
+        "SELECT id, payload, retry_count FROM sync_queue WHERE next_retry_at <= ? ORDER BY id LIMIT 50",
+    )
+    .bind(now_ms)
+    .fetch_all(&db.pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    tracing::info!("开始消费离线重发队列，待处理 {} 条", rows.len());
+
+    for (id, payload, retry_count) in rows {
+        // 超过重试上限，丢弃
+        if retry_count >= 3 {
+            tracing::warn!("重发队列消息超过重试上限，丢弃: queue_id={}", id);
+            sqlx::query("DELETE FROM sync_queue WHERE id = ?")
+                .bind(id)
+                .execute(&db.pool)
+                .await
+                .ok();
+            continue;
+        }
+
+        let msg_payload: serde_json::Value =
+            serde_json::from_str(&payload).unwrap_or_default();
+
+        let url = format!("{}/api/v1/im/messages", crate::api::client::BASE_URL);
+        let builder = api.client().post(&url).json(&msg_payload);
+        let auth_builder = api.inject_auth(builder).await;
+
+        match api
+            .send_request::<serde_json::Value>(auth_builder)
+            .await
+        {
+            Ok(resp) => {
+                // 发送成功 → 删除队列项，更新本地消息状态
+                sqlx::query("DELETE FROM sync_queue WHERE id = ?")
+                    .bind(id)
+                    .execute(&db.pool)
+                    .await
+                    .ok();
+
+                // 将本地消息从 pending/failed 更新为 success
+                if let Some(uuid) = msg_payload.get("uuid").and_then(|v| v.as_str()) {
+                    if let Some(remote_id) = resp.get("id").and_then(|v| v.as_i64()) {
+                        sqlx::query(
+                            "UPDATE message SET msg_id = ?, local_status = 0 WHERE msg_id = ?",
+                        )
+                        .bind(remote_id.to_string())
+                        .bind(uuid)
+                        .execute(&db.pool)
+                        .await
+                        .ok();
+                    }
+                }
+                tracing::info!("重发队列消息成功: queue_id={}", id);
+            }
+            Err(_) => {
+                // 仍然失败 → 递增 retry_count，延迟下次重试
+                let next_retry = now_ms + (5000 * (retry_count + 1));
+                sqlx::query(
+                    "UPDATE sync_queue SET retry_count = retry_count + 1, next_retry_at = ? WHERE id = ?",
+                )
+                .bind(next_retry)
+                .bind(id)
+                .execute(&db.pool)
+                .await
+                .ok();
+                tracing::warn!(
+                    "重发队列消息仍失败: queue_id={}, retry={}",
+                    id,
+                    retry_count + 1
+                );
+            }
+        }
+    }
+
+    Ok(())
 }

@@ -157,8 +157,8 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
     let req = api.inject_auth(req).await;
     let resp: SyncResponse = api.send_request(req).await.map_err(|e| e.to_string())?;
 
-    println!(
-        ">>> [SYNC] friends={}, contacts={}, room_groups={}, user_profiles={}",
+    info!(
+        "[SYNC] friends={}, contacts={}, room_groups={}, user_profiles={}",
         resp.friends.len(),
         resp.contacts.len(),
         resp.room_groups.len(),
@@ -172,7 +172,7 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
         || !resp.user_profiles.is_empty();
 
     if !has_data {
-        println!(">>> [SYNC] 无增量数据，跳过落库");
+        info!("[SYNC] 无增量数据，跳过落库");
         return Ok(());
     }
 
@@ -200,7 +200,7 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
         .await
         .map_err(|e| e.to_string())?;
     }
-    println!(">>> [SYNC] user_friend 写入 {} 条", resp.friends.len());
+    info!("[SYNC] user_friend 写入 {} 条", resp.friends.len());
 
     // ── 构建 room_id → room_type 映射表（来自 rooms）──
     let mut rt_map = std::collections::HashMap::new();
@@ -268,7 +268,7 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
         .await
         .map_err(|e| e.to_string())?;
     }
-    println!(">>> [SYNC] contact 写入 {} 条", resp.contacts.len());
+    info!("[SYNC] contact 写入 {} 条", resp.contacts.len());
 
     // ── 群聊 → room_group ──
     for rg in &resp.room_groups {
@@ -294,7 +294,7 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
         .await
         .map_err(|e| e.to_string())?;
     }
-    println!(">>> [SYNC] room_group 写入 {} 条", resp.room_groups.len());
+    info!("[SYNC] room_group 写入 {} 条", resp.room_groups.len());
 
     // ── 群成员全量替换 → group_member ──
     let mut modified_groups: std::collections::HashSet<i64> = std::collections::HashSet::new();
@@ -342,8 +342,8 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
         .await
         .map_err(|e| e.to_string())?;
     }
-    println!(
-        ">>> [SYNC] user_profile 写入 {} 条",
+    info!(
+        "[SYNC] user_profile 写入 {} 条",
         resp.user_profiles.len()
     );
 

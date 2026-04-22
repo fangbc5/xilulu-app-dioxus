@@ -89,3 +89,7 @@ pub enum WsStatus {
 pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(10);
 pub const MAX_RECONNECT_DELAY: Duration = Duration::from_secs(30);
 pub const INITIAL_RECONNECT_DELAY: Duration = Duration::from_millis(1000);
+
+/// 内部保留消息类型（不来自服务端，仅用于 SDK 内部事件驱动）
+/// WS 重连成功后发送此事件，触发增量同步补齐断线期间丢失的数据
+pub const INTERNAL_WS_RECONNECTED: i32 = -100;
