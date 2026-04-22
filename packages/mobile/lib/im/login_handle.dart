@@ -46,13 +46,15 @@ class ImLoginManager {
         await SharedUtil.instance.saveString('access_token', '');
         await SharedUtil.instance.saveString('refresh_token', '');
       } else {
+        final savedUserId = await SharedUtil.instance.getString(Keys.account) ?? '';
         await rust_api.coreUpdateTokens(
           accessToken: savedAccess,
           refreshToken: savedRefresh,
           accessExpiresAt: accessExpiresAt > 0 ? accessExpiresAt : null,
           refreshExpiresAt: refreshExpiresAt > 0 ? refreshExpiresAt : null,
+          userId: savedUserId.isNotEmpty ? savedUserId : null,
         );
-        debugPrint('🔄 Token 种子注入完成: access_expires_at=$accessExpiresAt, refresh_expires_at=$refreshExpiresAt');
+        debugPrint('🔄 Token 种子注入完成: access_expires_at=$accessExpiresAt, refresh_expires_at=$refreshExpiresAt, user_id=$savedUserId');
       }
     } else {
       debugPrint('🚫 冷启动拦截：本地无可用 Token 凭据，强制回退至登录态');
@@ -215,6 +217,7 @@ class ImLoginManager {
       refreshToken: '',
       accessExpiresAt: null,
       refreshExpiresAt: null,
+      userId: null,
     );
     await SharedUtil.instance.saveBoolean(Keys.hasLogged, false);
     await SharedUtil.instance.saveString('access_token', '');

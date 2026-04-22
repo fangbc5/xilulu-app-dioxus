@@ -16,16 +16,16 @@ pub struct ServerUserFriend {
     pub friend_uid: i64,
     pub remark: Option<String>,
     pub status: i16,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 /// 对应服务端 contact 实体
 #[derive(Debug, Deserialize, Clone)]
 pub struct ServerContact {
     pub room_id: i64,
-    pub read_time: Option<String>,
-    pub active_time: Option<String>,
+    pub read_time: Option<i64>,
+    pub active_time: Option<i64>,
     pub last_msg_id: Option<i64>,
     pub read_msg_id: Option<i64>,
     pub clear_msg_id: i64,
@@ -33,8 +33,8 @@ pub struct ServerContact {
     pub is_top: i16,
     pub is_deleted: i16,
     pub unread_count: i64,
-    pub created_at: Option<String>,
-    pub updated_at: String,
+    pub created_at: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 /// 对应服务端 room 实体
@@ -43,8 +43,8 @@ pub struct ServerRoom {
     pub id: i64,
     #[serde(rename = "type")]
     pub r#type: i16,
-    pub active_time: String,
-    pub updated_at: String,
+    pub active_time: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 /// 对应服务端 room_friend 实体
@@ -53,7 +53,7 @@ pub struct ServerRoomFriend {
     pub room_id: i64,
     pub uid1: i64,
     pub uid2: i64,
-    pub created_at: String,
+    pub created_at: Option<i64>,
 }
 
 /// 对应服务端 room_group 实体
@@ -66,8 +66,8 @@ pub struct ServerRoomGroup {
     pub notice: Option<String>,
     pub is_deleted: i16,
     pub created_by: i64,
-    pub created_at: Option<String>,
-    pub updated_at: String,
+    pub created_at: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 /// 对应服务端 group_member 实体
@@ -76,8 +76,8 @@ pub struct ServerGroupMember {
     pub group_id: i64,
     pub uid: i64,
     pub role: i16,
-    pub created_at: Option<String>,
-    pub updated_at: String,
+    pub created_at: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 /// 对应服务端 UserBrief（来自 ms-identity BFF）
@@ -119,24 +119,21 @@ pub struct ServerMessage {
     pub reply_msg_id: Option<i64>,
     pub status: i16,
     pub extra: Option<serde_json::Value>,
-    pub created_at: String,
-    pub updated_at: Option<String>,
+    pub created_at: Option<i64>,
+    pub updated_at: Option<i64>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 增量同步核心逻辑
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// 解析 RFC3339 时间字符串为毫秒时间戳
-fn parse_ts(s: &str) -> i64 {
-    chrono::DateTime::parse_from_rfc3339(s)
-        .map(|d| d.timestamp_millis())
-        .unwrap_or(0)
+/// 兼容老代码解析时间戳，如果已经是数字则直接返回
+pub fn parse_ts(val: i64) -> i64 {
+    val
 }
 
-fn parse_ts_opt(s: Option<&str>) -> Option<i64> {
-    s.and_then(|v| chrono::DateTime::parse_from_rfc3339(v).ok())
-        .map(|d| d.timestamp_millis())
+pub fn parse_ts_opt(val: Option<i64>) -> Option<i64> {
+    val
 }
 
 /// 执行增量同步
@@ -182,8 +179,8 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
     // ── 好友关系 → user_friend ──
     // 服务端已确保只返回 uid=me 的记录，直接按服务端字段写入，uid/friend_uid 都保留
     for friend in &resp.friends {
-        let created_ms = parse_ts(&friend.created_at);
-        let updated_ms = parse_ts(&friend.updated_at);
+        let created_ms = friend.created_at.unwrap_or(0);
+        let updated_ms = friend.updated_at.unwrap_or(0);
         sqlx::query(
             "INSERT INTO user_friend (uid, friend_uid, remark, status, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?)
@@ -219,10 +216,10 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
     for c in &resp.contacts {
         let room_type = rt_map.get(&c.room_id).copied();
         let friend_uid = rf_map.get(&c.room_id).copied();
-        let read_time_ms = parse_ts_opt(c.read_time.as_deref());
-        let active_time_ms = parse_ts_opt(c.active_time.as_deref());
-        let created_ms = parse_ts_opt(c.created_at.as_deref());
-        let updated_ms = parse_ts(&c.updated_at);
+        let read_time_ms = c.read_time;
+        let active_time_ms = c.active_time;
+        let created_ms = c.created_at;
+        let updated_ms = c.updated_at.unwrap_or(0);
 
         sqlx::query(
             "INSERT INTO contact
@@ -272,8 +269,8 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
 
     // ── 群聊 → room_group ──
     for rg in &resp.room_groups {
-        let created_ms = parse_ts_opt(rg.created_at.as_deref()).unwrap_or(0);
-        let updated_ms = parse_ts(&rg.updated_at);
+        let created_ms = rg.created_at.unwrap_or(0);
+        let updated_ms = rg.updated_at.unwrap_or(0);
         sqlx::query(
             "INSERT INTO room_group (id, room_id, name, avatar, notice, is_deleted, created_by, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -309,8 +306,8 @@ pub async fn execute_sync(api: &ApiClient, db: &DbManager, my_uid: i64) -> Resul
             .map_err(|e| e.to_string())?;
     }
     for gm in &resp.group_members {
-        let created_ms = parse_ts_opt(gm.created_at.as_deref()).unwrap_or(0);
-        let updated_ms = parse_ts(&gm.updated_at);
+        let created_ms = gm.created_at.unwrap_or(0);
+        let updated_ms = gm.updated_at.unwrap_or(0);
         sqlx::query(
             "INSERT INTO group_member (group_id, uid, role, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?)",
@@ -447,8 +444,8 @@ where
 
         for (_room_id, msgs) in &resp {
             for m in msgs {
-                let created_ms = parse_ts(&m.created_at);
-                let updated_ms = m.updated_at.as_deref().map(parse_ts).unwrap_or(created_ms);
+                let created_ms = m.created_at.unwrap_or(0);
+                let updated_ms = m.updated_at.unwrap_or(created_ms);
 
                 sqlx::query(
                     "INSERT INTO message
@@ -489,7 +486,7 @@ where
             total_inserted += msgs.len();
             // 将最新一条消息作为事件通知 Flutter 刷新 UI
             if let Some(latest) = msgs.first() {
-                let created_ms = parse_ts(&latest.created_at);
+                let created_ms = latest.created_at.unwrap_or(0);
                 let xmsg = crate::api::im::models::XMessage {
                     msg_id: latest.id.to_string(),
                     room_id: latest.room_id,

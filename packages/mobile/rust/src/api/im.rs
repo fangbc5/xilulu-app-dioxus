@@ -22,8 +22,9 @@ lazy_static::lazy_static! {
 pub fn init_app() {
     // 默认通过 flutter_rust_bridge 控制台输出和 panic 拦截
     flutter_rust_bridge::setup_default_user_utils();
-    // 初始化 Tracing 并定向到标准输出流，Flutter Run 会在控制台捕获这些输出
+    // 初始化 Tracing 并定向到标准输出流，关闭 ANSI 颜色以免 Flutter 控制台吞弃日志
     let _ = tracing_subscriber::fmt()
+        .with_ansi(false)
         .with_max_level(tracing::Level::INFO)
         .try_init();
 }
@@ -46,6 +47,7 @@ pub async fn core_update_tokens(
     refresh_token: String,
     access_expires_at: Option<i64>,
     refresh_expires_at: Option<i64>,
+    user_id: Option<String>,
 ) {
     use xilulu_core::port::StorageProvider;
     let _ = crate::api::GLOBAL_STORAGE
@@ -65,6 +67,12 @@ pub async fn core_update_tokens(
         let _ = crate::api::GLOBAL_STORAGE
             .set("refresh_expires_at", &refresh_exp.to_string())
             .await;
+    }
+    if let Some(uid) = user_id {
+        if !uid.is_empty() {
+            let _ = crate::api::GLOBAL_STORAGE.set("user_id", &uid).await;
+            tracing::info!("✅ 从 Flutter 恢复注入 user_id: {}", uid);
+        }
     }
 }
 
@@ -314,9 +322,8 @@ pub async fn core_start_ws(
                     // 通知 UI: 收取中...
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
-                            let _ = sink.add(
-                                serde_json::to_string(&XEvent::OnSyncStarted).unwrap(),
-                            );
+                            let _ =
+                                sink.add(serde_json::to_string(&XEvent::OnSyncStarted).unwrap());
                         }
                     }
 
@@ -347,9 +354,8 @@ pub async fn core_start_ws(
                             let _ = sink.add(
                                 serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
                             );
-                            let _ = sink.add(
-                                serde_json::to_string(&XEvent::OnSyncCompleted).unwrap(),
-                            );
+                            let _ =
+                                sink.add(serde_json::to_string(&XEvent::OnSyncCompleted).unwrap());
                         }
                     }
                 }
@@ -360,9 +366,9 @@ pub async fn core_start_ws(
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
                             let _ = sink.add(
-                                serde_json::to_string(
-                                    &XEvent::OnConnectionStatusChanged(status_str.to_string()),
-                                )
+                                serde_json::to_string(&XEvent::OnConnectionStatusChanged(
+                                    status_str.to_string(),
+                                ))
                                 .unwrap(),
                             );
                         }
@@ -428,18 +434,13 @@ pub async fn core_on_app_foreground() -> Result<(), String> {
         // 通知 UI: 收取中...
         if let Ok(guard) = FLUTTER_STREAM.lock() {
             if let Some(sink) = guard.as_ref() {
-                let _ = sink.add(
-                    serde_json::to_string(&XEvent::OnSyncStarted).unwrap(),
-                );
+                let _ = sink.add(serde_json::to_string(&XEvent::OnSyncStarted).unwrap());
             }
         }
 
-        if let Err(e) = xilulu_core::api::im::sync::execute_sync(
-            &crate::api::GLOBAL_API_CLIENT,
-            db,
-            my_uid,
-        )
-        .await
+        if let Err(e) =
+            xilulu_core::api::im::sync::execute_sync(&crate::api::GLOBAL_API_CLIENT, db, my_uid)
+                .await
         {
             tracing::error!("前台恢复同步失败: {}", e);
         }
@@ -447,12 +448,9 @@ pub async fn core_on_app_foreground() -> Result<(), String> {
         // 通知 Flutter 刷新 + 收取完成
         if let Ok(guard) = FLUTTER_STREAM.lock() {
             if let Some(sink) = guard.as_ref() {
-                let _ = sink.add(
-                    serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap(),
-                );
-                let _ = sink.add(
-                    serde_json::to_string(&XEvent::OnSyncCompleted).unwrap(),
-                );
+                let _ =
+                    sink.add(serde_json::to_string(&XEvent::OnConversationListUpdated).unwrap());
+                let _ = sink.add(serde_json::to_string(&XEvent::OnSyncCompleted).unwrap());
             }
         }
     }

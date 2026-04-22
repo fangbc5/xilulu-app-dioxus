@@ -17,3 +17,7 @@ async-trait = "0.1.89"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[lints.rust]
+# 忽略 Flutter Rust Bridge 宏产生的 cfg 警告 (Rust 1.80+ 引入的意外 cfg 检查)
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(frb_expand)'] }

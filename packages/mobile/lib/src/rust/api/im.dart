@@ -18,12 +18,14 @@ Future<void> coreUpdateTokens(
         {required String accessToken,
         required String refreshToken,
         PlatformInt64? accessExpiresAt,
-        PlatformInt64? refreshExpiresAt}) =>
+        PlatformInt64? refreshExpiresAt,
+        String? userId}) =>
     RustLib.instance.api.crateApiImCoreUpdateTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
         accessExpiresAt: accessExpiresAt,
-        refreshExpiresAt: refreshExpiresAt);
+        refreshExpiresAt: refreshExpiresAt,
+        userId: userId);
 
 /// 启动 WebSocket 连接和 IM 后台任务。
 ///

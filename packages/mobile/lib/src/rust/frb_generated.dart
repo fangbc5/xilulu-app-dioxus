@@ -187,7 +187,8 @@ abstract class RustLibApi extends BaseApi {
       {required String accessToken,
       required String refreshToken,
       PlatformInt64? accessExpiresAt,
-      PlatformInt64? refreshExpiresAt});
+      PlatformInt64? refreshExpiresAt,
+      String? userId});
 
   Future<String> crateApiImCoreUpdateUserInfo(
       {required PlatformInt64 userId,
@@ -1096,7 +1097,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       {required String accessToken,
       required String refreshToken,
       PlatformInt64? accessExpiresAt,
-      PlatformInt64? refreshExpiresAt}) {
+      PlatformInt64? refreshExpiresAt,
+      String? userId}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
@@ -1104,6 +1106,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(refreshToken, serializer);
         sse_encode_opt_box_autoadd_i_64(accessExpiresAt, serializer);
         sse_encode_opt_box_autoadd_i_64(refreshExpiresAt, serializer);
+        sse_encode_opt_String(userId, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 34, port: port_);
       },
@@ -1112,7 +1115,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: null,
       ),
       constMeta: kCrateApiImCoreUpdateTokensConstMeta,
-      argValues: [accessToken, refreshToken, accessExpiresAt, refreshExpiresAt],
+      argValues: [
+        accessToken,
+        refreshToken,
+        accessExpiresAt,
+        refreshExpiresAt,
+        userId
+      ],
       apiImpl: this,
     ));
   }
@@ -1123,7 +1132,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "accessToken",
           "refreshToken",
           "accessExpiresAt",
-          "refreshExpiresAt"
+          "refreshExpiresAt",
+          "userId"
         ],
       );
 
