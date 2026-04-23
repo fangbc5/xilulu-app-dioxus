@@ -212,6 +212,7 @@ class _HomePageState extends State<HomePage>
                       content: model.lastMessage?.content,
                       time: timeView(model.lastMessage?.timestamp ?? 0),
                       isBorder: model.showName != _chatData[0]?.showName,
+                      unreadCount: model.unreadCount ?? 0,
                     ),
                   );
                 },

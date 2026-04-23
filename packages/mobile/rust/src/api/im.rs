@@ -277,7 +277,7 @@ pub async fn core_start_ws(
                     };
 
                     if let Some(db) = &*GLOBAL_DB.read().await {
-                        xilulu_core::api::im::message::save_incoming_message(db, &xmsg).await;
+                        xilulu_core::api::im::message::save_incoming_message(db, &xmsg, my_uid).await;
                     }
 
                     if let Ok(guard) = FLUTTER_STREAM.lock() {

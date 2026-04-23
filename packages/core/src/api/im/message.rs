@@ -122,6 +122,7 @@ pub async fn send_text_message(
 pub async fn save_incoming_message(
     db: &crate::db::DbManager,
     xmsg: &crate::api::im::models::XMessage,
+    my_uid: i64,
 ) {
     let now_ms = chrono::Utc::now().timestamp_millis();
     let _ = sqlx::query(
@@ -140,6 +141,27 @@ pub async fn save_incoming_message(
     .bind(xmsg.status)
     .bind(xmsg.created_at)
     .bind(now_ms)
+    .execute(&db.pool)
+    .await;
+
+    // 更新对应的会话记录，包含最后一条消息 ID，以及累加未读数
+    // 如果是自己在多设备端发的消息，未读数不应增加
+    let increment = if xmsg.from_uid == my_uid { 0 } else { 1 };
+    let msg_id_i64: i64 = xmsg.msg_id.parse().unwrap_or(0);
+
+    let _ = sqlx::query(
+        r#"
+        UPDATE contact 
+        SET last_msg_id = ?, 
+            unread_count = unread_count + ?, 
+            updated_at = ? 
+        WHERE room_id = ?
+        "#
+    )
+    .bind(msg_id_i64)
+    .bind(increment)
+    .bind(now_ms)
+    .bind(xmsg.room_id)
     .execute(&db.pool)
     .await;
 }
@@ -200,12 +222,27 @@ pub async fn get_history_messages(
 
     // 本地不足时从远端补充
     if messages.len() < limit as usize {
-        let cursor = messages.last().map(|m| m.created_at);
+        // 游标应该是最后一条正常远端消息的 msg_id，而不是 created_at
+        let mut cursor = None;
+        for m in messages.iter().rev() {
+            if let Ok(id) = m.msg_id.parse::<i64>() {
+                if id > 0 {
+                    cursor = Some(id);
+                    break;
+                }
+            }
+        }
+        
         let need_count = limit - messages.len() as i64;
 
         match pull_remote_messages(api, db, room_id, cursor, need_count).await {
             Ok(remote_msgs) => {
-                messages.extend(remote_msgs);
+                // 去重保护，防止本地已存在相同的消息重新出现两次
+                for rm in remote_msgs {
+                    if !messages.iter().any(|m| m.msg_id == rm.msg_id) {
+                        messages.push(rm);
+                    }
+                }
             }
             Err(e) => {
                 tracing::warn!("拉取远端历史消息失败: {}", e);
