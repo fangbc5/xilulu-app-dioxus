@@ -10,7 +10,7 @@ use rust_i18n::t;
 
 #[component]
 pub fn Login() -> Element {
-    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+    let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
     let session = core_app.auth.current_session();
     let navigator = use_navigator();
 

@@ -15,7 +15,7 @@ pub fn AppContact() -> Element {
     let lang = use_language();
     let l_str = lang().as_str();
 
-    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+    let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
     let mut friends = use_signal(|| core_app.social.contacts_receiver.borrow().clone());
 
     use_effect({

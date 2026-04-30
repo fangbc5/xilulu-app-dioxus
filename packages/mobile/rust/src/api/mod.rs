@@ -13,8 +13,8 @@ pub use oss::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
-use xilulu_core::api::client::ApiClient;
-use xilulu_core::port::StorageProvider;
+use xilulu_im_sdk::api::client::ApiClient;
+use xilulu_im_sdk::port::StorageProvider;
 
 /// 移动端 Token 内存存储适配器。
 /// 当 access_token 被写入（非空）时，自动向内部广播通道发出信号，

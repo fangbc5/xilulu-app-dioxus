@@ -86,7 +86,7 @@ pub fn OtpVerify(medium: String) -> Element {
     });
 
     let nav = use_navigator();
-    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+    let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
 
     let medium_for_verify = medium.clone();
     let app_clone_1 = core_app.clone();

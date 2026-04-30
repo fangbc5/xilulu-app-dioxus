@@ -1,9 +1,9 @@
 use crate::api::{GLOBAL_API_CLIENT, GLOBAL_STORAGE};
-use xilulu_core::api::auth::{
+use xilulu_im_sdk::api::auth::{
     login, login_or_register, logout, register, send_verify_code, LoginOrRegisterRequest,
     LoginRequest, RegisterRequest,
 };
-use xilulu_core::port::StorageProvider;
+use xilulu_im_sdk::port::StorageProvider;
 
 pub async fn core_login_with_pwd(
     account: String,

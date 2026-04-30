@@ -2,14 +2,14 @@ use crate::frb_generated::StreamSink;
 use std::sync::Arc;
 
 use crate::api::GLOBAL_API_CLIENT;
-use xilulu_core::api::im::message::send_text_message;
-pub use xilulu_core::api::im::models::{XContact, XEvent, XMessage};
-use xilulu_core::port::StorageProvider;
-use xilulu_core::ws::client::WsClient;
+use xilulu_im_sdk::api::im::message::send_text_message;
+pub use xilulu_im_sdk::api::im::models::{XContact, XEvent, XMessage};
+use xilulu_im_sdk::port::StorageProvider;
+use xilulu_im_sdk::ws::client::WsClient;
 
 lazy_static::lazy_static! {
     /// SDK Singleton Global Database
-    pub static ref GLOBAL_DB: tokio::sync::RwLock<Option<xilulu_core::db::DbManager>> = tokio::sync::RwLock::new(None);
+    pub static ref GLOBAL_DB: tokio::sync::RwLock<Option<xilulu_im_sdk::db::DbManager>> = tokio::sync::RwLock::new(None);
 
     /// Flutter Event Sink — hot restart 后 core_subscribe_im_events 会替换它
     pub static ref FLUTTER_STREAM: std::sync::Mutex<Option<StreamSink<String>>> = std::sync::Mutex::new(None);
@@ -31,7 +31,7 @@ pub fn init_app() {
 
 pub async fn core_init_sdk(db_path: String) -> Result<(), String> {
     let db_url = format!("sqlite://{}", db_path);
-    let manager = xilulu_core::db::DbManager::new(&db_url)
+    let manager = xilulu_im_sdk::db::DbManager::new(&db_url)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -49,7 +49,7 @@ pub async fn core_update_tokens(
     refresh_expires_at: Option<i64>,
     user_id: Option<String>,
 ) {
-    use xilulu_core::port::StorageProvider;
+    use xilulu_im_sdk::port::StorageProvider;
     let _ = crate::api::GLOBAL_STORAGE
         .set("access_token", &access_token)
         .await;
@@ -177,7 +177,7 @@ pub async fn core_start_ws(
     // 5. 启动增量同步任务
     tokio::spawn(async move {
         if let Some(db) = &*GLOBAL_DB.read().await {
-            match xilulu_core::api::im::sync::execute_sync(
+            match xilulu_im_sdk::api::im::sync::execute_sync(
                 &crate::api::GLOBAL_API_CLIENT,
                 db,
                 my_uid,
@@ -194,7 +194,7 @@ pub async fn core_start_ws(
                     }
 
                     // 拉取近期消息
-                    match xilulu_core::api::im::sync::execute_recent_messages_sync(
+                    match xilulu_im_sdk::api::im::sync::execute_recent_messages_sync(
                         &crate::api::GLOBAL_API_CLIENT,
                         db,
                         sync_chat_history,
@@ -277,7 +277,7 @@ pub async fn core_start_ws(
                     };
 
                     if let Some(db) = &*GLOBAL_DB.read().await {
-                        xilulu_core::api::im::message::save_incoming_message(db, &xmsg, my_uid).await;
+                        xilulu_im_sdk::api::im::message::save_incoming_message(db, &xmsg, my_uid).await;
                     }
 
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
@@ -294,7 +294,7 @@ pub async fn core_start_ws(
             // 业务变更信令，触发增量同步
             else if msg.msg_type == 1003 || msg.msg_type == 1004 || msg.msg_type == 1005 {
                 if let Some(db) = &*GLOBAL_DB.read().await {
-                    if let Err(e) = xilulu_core::api::im::sync::execute_sync(
+                    if let Err(e) = xilulu_im_sdk::api::im::sync::execute_sync(
                         &crate::api::GLOBAL_API_CLIENT,
                         db,
                         my_uid,
@@ -316,7 +316,7 @@ pub async fn core_start_ws(
                 }
             }
             // WS 重连成功 → 立即触发增量同步 + 消费离线消息重发队列
-            else if msg.msg_type == xilulu_core::ws::models::INTERNAL_WS_RECONNECTED {
+            else if msg.msg_type == xilulu_im_sdk::ws::models::INTERNAL_WS_RECONNECTED {
                 tracing::info!("[WS] 重连成功，触发增量同步与消息重发...");
                 if let Some(db) = &*GLOBAL_DB.read().await {
                     // 通知 UI: 收取中...
@@ -328,7 +328,7 @@ pub async fn core_start_ws(
                     }
 
                     // 1. 增量同步，补齐断线期间丢失的数据
-                    if let Err(e) = xilulu_core::api::im::sync::execute_sync(
+                    if let Err(e) = xilulu_im_sdk::api::im::sync::execute_sync(
                         &crate::api::GLOBAL_API_CLIENT,
                         db,
                         my_uid,
@@ -339,7 +339,7 @@ pub async fn core_start_ws(
                     }
 
                     // 2. 消费离线消息重发队列
-                    if let Err(e) = xilulu_core::api::im::message::flush_sync_queue(
+                    if let Err(e) = xilulu_im_sdk::api::im::message::flush_sync_queue(
                         &crate::api::GLOBAL_API_CLIENT,
                         db,
                     )
@@ -361,7 +361,7 @@ pub async fn core_start_ws(
                 }
             }
             // WS 连接状态变更 → 转发给 Flutter UI 显示连接指示条
-            else if msg.msg_type == xilulu_core::ws::models::INTERNAL_WS_STATUS_CHANGED {
+            else if msg.msg_type == xilulu_im_sdk::ws::models::INTERNAL_WS_STATUS_CHANGED {
                 if let Some(status_str) = msg.data.get("status").and_then(|v| v.as_str()) {
                     if let Ok(guard) = FLUTTER_STREAM.lock() {
                         if let Some(sink) = guard.as_ref() {
@@ -387,7 +387,7 @@ pub async fn core_start_ws(
             interval.tick().await;
             if let Some(db) = &*GLOBAL_DB.read().await {
                 tracing::info!("[SYNC] 定时兜底同步触发");
-                let _ = xilulu_core::api::im::sync::execute_sync(
+                let _ = xilulu_im_sdk::api::im::sync::execute_sync(
                     &crate::api::GLOBAL_API_CLIENT,
                     db,
                     my_uid,
@@ -439,7 +439,7 @@ pub async fn core_on_app_foreground() -> Result<(), String> {
         }
 
         if let Err(e) =
-            xilulu_core::api::im::sync::execute_sync(&crate::api::GLOBAL_API_CLIENT, db, my_uid)
+            xilulu_im_sdk::api::im::sync::execute_sync(&crate::api::GLOBAL_API_CLIENT, db, my_uid)
                 .await
         {
             tracing::error!("前台恢复同步失败: {}", e);
@@ -486,7 +486,7 @@ pub async fn core_get_history_messages(room_id: i64, limit: i64) -> Result<Strin
         .ok_or("Database not initialized! Call core_init_sdk first.")?;
 
     let messages =
-        xilulu_core::api::im::message::get_history_messages(&GLOBAL_API_CLIENT, db, room_id, limit)
+        xilulu_im_sdk::api::im::message::get_history_messages(&GLOBAL_API_CLIENT, db, room_id, limit)
             .await?;
     serde_json::to_string(&messages).map_err(|e| e.to_string())
 }
@@ -497,18 +497,18 @@ pub async fn core_get_contacts() -> Result<String, String> {
     let db = guard
         .as_ref()
         .ok_or("Database not initialized! Call core_init_sdk first.")?;
-    let contacts = xilulu_core::api::im::contact::list_contacts_local(db).await?;
+    let contacts = xilulu_im_sdk::api::im::contact::list_contacts_local(db).await?;
     serde_json::to_string(&contacts).map_err(|e| e.to_string())
 }
 
 /// 删除会话
 pub async fn core_delete_contact(room_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::contact::delete_contact(&GLOBAL_API_CLIENT, room_id).await
+    xilulu_im_sdk::api::im::contact::delete_contact(&GLOBAL_API_CLIENT, room_id).await
 }
 
 /// 标记会话已读
 pub async fn core_mark_read(room_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::contact::mark_read(&GLOBAL_API_CLIENT, room_id).await
+    xilulu_im_sdk::api::im::contact::mark_read(&GLOBAL_API_CLIENT, room_id).await
 }
 
 /// 从远端拉取历史消息，返回 JSON 数组字符串
@@ -522,7 +522,7 @@ pub async fn core_pull_remote_messages(
         .as_ref()
         .ok_or("Database not initialized! Call core_init_sdk first.")?;
 
-    let messages = xilulu_core::api::im::message::pull_remote_messages(
+    let messages = xilulu_im_sdk::api::im::message::pull_remote_messages(
         &GLOBAL_API_CLIENT,
         db,
         room_id,
@@ -539,45 +539,45 @@ pub async fn core_list_friends() -> Result<String, String> {
     let db = guard
         .as_ref()
         .ok_or("Database not initialized! Call core_init_sdk first.")?;
-    let friends = xilulu_core::api::im::friend::list_friends_local(db).await?;
+    let friends = xilulu_im_sdk::api::im::friend::list_friends_local(db).await?;
     serde_json::to_string(&friends).map_err(|e| e.to_string())
 }
 
 /// 搜索用户，返回 JSON 数组字符串
 pub async fn core_search_user(keyword: String) -> Result<String, String> {
-    let users = xilulu_core::api::im::friend::search_user(&GLOBAL_API_CLIENT, &keyword).await?;
+    let users = xilulu_im_sdk::api::im::friend::search_user(&GLOBAL_API_CLIENT, &keyword).await?;
     serde_json::to_string(&users).map_err(|e| e.to_string())
 }
 
 /// 添加好友（发送好友申请）
 pub async fn core_add_friend(target_uid: i64, message: Option<String>) -> Result<(), String> {
-    xilulu_core::api::im::friend::add_friend(&GLOBAL_API_CLIENT, target_uid, message).await
+    xilulu_im_sdk::api::im::friend::add_friend(&GLOBAL_API_CLIENT, target_uid, message).await
 }
 
 /// 删除好友
 pub async fn core_delete_friend(target_uid: i64) -> Result<(), String> {
-    xilulu_core::api::im::friend::delete_friend(&GLOBAL_API_CLIENT, target_uid).await
+    xilulu_im_sdk::api::im::friend::delete_friend(&GLOBAL_API_CLIENT, target_uid).await
 }
 
 /// 获取好友申请列表，返回 JSON 数组字符串
 pub async fn core_list_friend_applies() -> Result<String, String> {
-    let applies = xilulu_core::api::im::friend::list_friend_applies(&GLOBAL_API_CLIENT).await?;
+    let applies = xilulu_im_sdk::api::im::friend::list_friend_applies(&GLOBAL_API_CLIENT).await?;
     serde_json::to_string(&applies).map_err(|e| e.to_string())
 }
 
 /// 同意好友申请
 pub async fn core_approve_friend_apply(apply_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::friend::approve_apply(&GLOBAL_API_CLIENT, apply_id).await
+    xilulu_im_sdk::api::im::friend::approve_apply(&GLOBAL_API_CLIENT, apply_id).await
 }
 
 /// 拒绝好友申请
 pub async fn core_reject_friend_apply(apply_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::friend::reject_apply(&GLOBAL_API_CLIENT, apply_id).await
+    xilulu_im_sdk::api::im::friend::reject_apply(&GLOBAL_API_CLIENT, apply_id).await
 }
 
 /// 获取用户信息，返回 JSON 字符串
 pub async fn core_get_user_info(user_id: i64) -> Result<String, String> {
-    let user_info = xilulu_core::api::identity::get_user_info(&GLOBAL_API_CLIENT, user_id).await?;
+    let user_info = xilulu_im_sdk::api::identity::get_user_info(&GLOBAL_API_CLIENT, user_id).await?;
     serde_json::to_string(&user_info).map_err(|e| e.to_string())
 }
 
@@ -589,7 +589,7 @@ pub async fn core_update_user_info(
     self_signature: Option<String>,
     gender: Option<i32>,
 ) -> Result<String, String> {
-    let user_info = xilulu_core::api::identity::update_user_info(
+    let user_info = xilulu_im_sdk::api::identity::update_user_info(
         &GLOBAL_API_CLIENT,
         user_id,
         nick_name,
@@ -604,7 +604,7 @@ pub async fn core_update_user_info(
 /// 批量获取用户信息，返回 JSON 数组字符串
 pub async fn core_get_users_info(user_ids: Vec<i64>) -> Result<String, String> {
     let users_info =
-        xilulu_core::api::identity::get_users_info(&GLOBAL_API_CLIENT, user_ids).await?;
+        xilulu_im_sdk::api::identity::get_users_info(&GLOBAL_API_CLIENT, user_ids).await?;
     serde_json::to_string(&users_info).map_err(|e| e.to_string())
 }
 
@@ -614,7 +614,7 @@ pub async fn core_create_group(
     member_uids: Vec<i64>,
     introduction: Option<String>,
 ) -> Result<String, String> {
-    let group_info = xilulu_core::api::im::room::create_group(
+    let group_info = xilulu_im_sdk::api::im::room::create_group(
         &GLOBAL_API_CLIENT,
         name,
         member_uids,
@@ -630,7 +630,7 @@ pub async fn core_get_group_info(group_id: i64) -> Result<String, String> {
     let db = guard
         .as_ref()
         .ok_or("Database not initialized! Call core_init_sdk first.")?;
-    let group_info = xilulu_core::api::im::room::get_group_info_local(db, group_id).await?;
+    let group_info = xilulu_im_sdk::api::im::room::get_group_info_local(db, group_id).await?;
     serde_json::to_string(&group_info).map_err(|e| e.to_string())
 }
 
@@ -640,23 +640,23 @@ pub async fn core_list_group_members(group_id: i64) -> Result<String, String> {
     let db = guard
         .as_ref()
         .ok_or("Database not initialized! Call core_init_sdk first.")?;
-    let members = xilulu_core::api::im::room::list_group_members_local(db, group_id).await?;
+    let members = xilulu_im_sdk::api::im::room::list_group_members_local(db, group_id).await?;
     serde_json::to_string(&members).map_err(|e| e.to_string())
 }
 
 /// 退出群组
 pub async fn core_quit_group(group_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::room::quit_group(&GLOBAL_API_CLIENT, group_id).await
+    xilulu_im_sdk::api::im::room::quit_group(&GLOBAL_API_CLIENT, group_id).await
 }
 
 /// 邀请成员加入群组
 pub async fn core_invite_members(group_id: i64, member_uids: Vec<i64>) -> Result<(), String> {
-    xilulu_core::api::im::room::invite_members(&GLOBAL_API_CLIENT, group_id, member_uids).await
+    xilulu_im_sdk::api::im::room::invite_members(&GLOBAL_API_CLIENT, group_id, member_uids).await
 }
 
 /// 踢出群成员
 pub async fn core_kick_member(group_id: i64, user_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::room::kick_member(&GLOBAL_API_CLIENT, group_id, user_id).await
+    xilulu_im_sdk::api::im::room::kick_member(&GLOBAL_API_CLIENT, group_id, user_id).await
 }
 
 /// 更新群组信息，返回更新后的群组信息 JSON 字符串
@@ -667,7 +667,7 @@ pub async fn core_update_group_info(
     introduction: Option<String>,
     notification: Option<String>,
 ) -> Result<String, String> {
-    let group_info = xilulu_core::api::im::room::update_group_info(
+    let group_info = xilulu_im_sdk::api::im::room::update_group_info(
         &GLOBAL_API_CLIENT,
         group_id,
         name,
@@ -681,5 +681,5 @@ pub async fn core_update_group_info(
 
 /// 解散群组
 pub async fn core_dismiss_group(group_id: i64) -> Result<(), String> {
-    xilulu_core::api::im::room::dismiss_group(&GLOBAL_API_CLIENT, group_id).await
+    xilulu_im_sdk::api::im::room::dismiss_group(&GLOBAL_API_CLIENT, group_id).await
 }

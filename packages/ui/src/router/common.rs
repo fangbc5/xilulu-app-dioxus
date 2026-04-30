@@ -13,7 +13,7 @@ pub fn AppRoot() -> Element {
     let core_app_opt = use_resource(move || async move {
         // Desktop 这里直接写入 Adapter 实例，如果是 Mobile 可以根据条件编译加载其他的
         let storage = std::sync::Arc::new(crate::store::adapter::DesktopStorageAdapter);
-        let core_app = xilulu_core::service::app::CoreApp::new(storage).await;
+        let core_app = xilulu_im_sdk::service::app::CoreApp::new(storage).await;
         std::sync::Arc::new(core_app)
     });
 
@@ -38,7 +38,7 @@ pub fn AppRoot() -> Element {
 
 pub fn use_auth_guard() {
     let nav = use_navigator();
-    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+    let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
     let session = core_app.auth.current_session();
 
     // 可以在这里监听 auth 是否因为 HTTP 失败主动退出，如果退出了则重定向

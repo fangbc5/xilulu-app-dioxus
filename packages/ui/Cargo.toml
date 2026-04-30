@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-xilulu_core = { workspace = true }
+xilulu_im_sdk = { workspace = true }
 dioxus = { workspace = true, features = ["router"] }
 dioxus-free-icons = { version = "0.10.0", features = ["lucide"] }
 rust-i18n = "3.1"

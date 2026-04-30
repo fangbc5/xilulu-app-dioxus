@@ -1,4 +1,4 @@
-use xilulu_core::port::StorageProvider;
+use xilulu_im_sdk::port::StorageProvider;
 use async_trait::async_trait;
 use crate::store::storage::local;
 

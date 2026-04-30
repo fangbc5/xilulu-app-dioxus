@@ -4,7 +4,6 @@ use dioxus_free_icons::icons::ld_icons::{LdBellOff, LdCirclePlus, LdMonitor, LdS
 use dioxus_free_icons::Icon;
 use rust_i18n::t;
 
-
 const AVATAR_COLORS: &[&str] = &[
     "#1890ff", "#52c41a", "#fa8c16", "#eb2f96", "#722ed1", "#13c2c2", "#f5222d",
 ];
@@ -14,7 +13,7 @@ pub fn AppChat() -> Element {
     let lang = use_language();
     let l_str = lang().as_str();
 
-    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+    let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
     let mut rooms = use_signal(|| core_app.chat.rooms_receiver.borrow().clone());
 
     use_effect({
@@ -94,87 +93,92 @@ pub fn AppChat() -> Element {
                 }
 
                 {
-                    let nodes: Vec<_> = rooms().into_iter().map(|room| {
-                        let dynamic_bg = if room.is_top {
-                            "bg-[#f3f3f3] dark:bg-[#111111]"
-                        } else {
-                            "bg-white dark:bg-black"
-                        };
-                        let mut hash: usize = 0;
-                        for byte in room.id.bytes() {
-                            hash = hash.wrapping_add(byte as usize);
-                        }
-                        let bg_color = format!(
-                            "background-color: {}",
-                            AVATAR_COLORS[hash % AVATAR_COLORS.len()]
-                        );
-                        rsx! {
-                            div {
-                                key: "{room.id}",
-                                class: "w-full flex items-center h-[72px] pl-4 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors cursor-pointer {dynamic_bg}",
+                    let nodes: Vec<_> = rooms()
 
-                                div { class: "relative flex-shrink-0 w-12 h-12 mr-3 flex items-center justify-center text-white text-lg font-medium",
-                                    if let Some(av) = &room.avatar {
-                                        img {
-                                            src: "{av}",
-                                            class: "w-full h-full object-cover rounded-[10px]",
-                                        }
-                                    } else {
-                                        div {
-                                            class: "w-full h-full flex items-center justify-center rounded-[10px]",
-                                            style: "{bg_color}",
-                                            "{room.name.chars().next().unwrap_or('?')}"
-                                        }
-                                    }
-        
-                                    if room.unread > 0 {
-                                        if room.is_mute {
-                                            div { class: "absolute -top-1 -right-1 w-[10px] h-[10px] bg-[#f5222d] border border-white dark:border-zinc-900 rounded-full" }
+                        .into_iter()
+                        .map(|room| {
+                            let dynamic_bg = if room.is_top {
+                                "bg-[#f3f3f3] dark:bg-[#111111]"
+                            } else {
+                                "bg-white dark:bg-black"
+                            };
+                            let mut hash: usize = 0;
+                            for byte in room.id.bytes() {
+                                hash = hash.wrapping_add(byte as usize);
+                            }
+                            let bg_color = format!(
+                                "background-color: {}",
+                                AVATAR_COLORS[hash % AVATAR_COLORS.len()],
+                            );
+                            rsx! {
+                                div {
+                                    key: "{room.id}",
+                                    class: "w-full flex items-center h-[72px] pl-4 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors cursor-pointer {dynamic_bg}",
+                
+                                    div { class: "relative flex-shrink-0 w-12 h-12 mr-3 flex items-center justify-center text-white text-lg font-medium",
+                                        if let Some(av) = &room.avatar {
+                                            img {
+                                                src: "{av}",
+                                                class: "w-full h-full object-cover rounded-[10px]",
+                                            }
                                         } else {
-                                            div { class: "absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-[4px] bg-[#f5222d] border-[1.5px] border-white dark:border-zinc-900 text-[10px] font-bold text-white",
-                                                {if room.unread > 99 { "99+".to_string() } else { room.unread.to_string() }}
+                                            div {
+                                                class: "w-full h-full flex items-center justify-center rounded-[10px]",
+                                                style: "{bg_color}",
+                                                "{room.name.chars().next().unwrap_or('?')}"
                                             }
                                         }
-                                    }
-                                }
-        
-                                div { class: "flex-1 h-full py-[10px] flex flex-col justify-between border-b border-[#f3f3f3] dark:border-zinc-800/50",
-        
-                                    div { class: "w-full flex items-center justify-between pr-4",
-                                        span { class: "flex-1 min-w-0 truncate text-[16.5px] text-zinc-900 dark:text-zinc-100 font-normal pr-2",
-                                            "{room.name}"
-                                        }
-                                        span { class: "flex-shrink-0 text-[12px] text-[#b2b2b2] dark:text-zinc-500",
-                                            "{room.last_time}"
-                                        }
-                                    }
-        
-                                    div { class: "w-full flex items-center justify-between pr-4",
-                                        p { class: "flex-1 min-w-0 truncate text-[14px] text-[#b2b2b2] dark:text-zinc-500 pr-2",
-                                            if room.last_msg.starts_with("[群公告]") {
-                                                span { class: "text-[#fa5151]", "[群公告]" }
-                                                span { {room.last_msg.replace("[群公告]", "")} }
+                
+                                        if room.unread > 0 {
+                                            if room.is_mute {
+                                                div { class: "absolute -top-1 -right-1 w-[10px] h-[10px] bg-[#f5222d] border border-white dark:border-zinc-900 rounded-full" }
                                             } else {
-                                                "{room.last_msg}"
+                                                div { class: "absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-[4px] bg-[#f5222d] border-[1.5px] border-white dark:border-zinc-900 text-[10px] font-bold text-white",
+                                                    {if room.unread > 99 { "99+".to_string() } else { room.unread.to_string() }}
+                                                }
                                             }
                                         }
-                                        if room.is_mute {
-                                            Icon {
-                                                icon: LdBellOff,
-                                                width: 14,
-                                                height: 14,
-                                                class: "flex-shrink-0 text-[#d4d4d4] dark:text-zinc-600",
+                                    }
+                
+                                    div { class: "flex-1 h-full py-[10px] flex flex-col justify-between border-b border-[#f3f3f3] dark:border-zinc-800/50",
+                
+                                        div { class: "w-full flex items-center justify-between pr-4",
+                                            span { class: "flex-1 min-w-0 truncate text-[16.5px] text-zinc-900 dark:text-zinc-100 font-normal pr-2",
+                                                "{room.name}"
                                             }
-                                        } else {
-                                            div { class: "w-[14px]" } // 占位保持高度对齐
+                                            span { class: "flex-shrink-0 text-[12px] text-[#b2b2b2] dark:text-zinc-500",
+                                                "{room.last_time}"
+                                            }
+                                        }
+                
+                                        div { class: "w-full flex items-center justify-between pr-4",
+                                            p { class: "flex-1 min-w-0 truncate text-[14px] text-[#b2b2b2] dark:text-zinc-500 pr-2",
+                                                if room.last_msg.starts_with("[群公告]") {
+                                                    span { class: "text-[#fa5151]", "[群公告]" }
+                                                    span { {room.last_msg.replace("[群公告]", "")} }
+                                                } else {
+                                                    "{room.last_msg}"
+                                                }
+                                            }
+                                            if room.is_mute {
+                                                Icon {
+                                                    icon: LdBellOff,
+                                                    width: 14,
+                                                    height: 14,
+                                                    class: "flex-shrink-0 text-[#d4d4d4] dark:text-zinc-600",
+                                                }
+                                            } else {
+                                                div { class: "w-[14px]" } // 占位保持高度对齐
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    }).collect();
-
-                    rsx! { {nodes.into_iter()} }
+                        })
+                        .collect();
+                    rsx! {
+                        {nodes.into_iter()}
+                    }
                 }
             }
         }

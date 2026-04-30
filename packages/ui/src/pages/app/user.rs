@@ -32,7 +32,7 @@ pub fn AppUser() -> Element {
                     class: "w-full p-4 bg-white dark:bg-[#2C2C2C] text-[#FA5151] rounded-lg font-medium active:bg-zinc-50 dark:active:bg-zinc-800 transition-colors",
                     onclick: move |_| {
                         let nav = use_navigator();
-                        let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+                        let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
                         spawn(async move {
                             // Hit backend logout API and clean local storage and memory atomically
                             let _ = core_app.auth.logout().await;

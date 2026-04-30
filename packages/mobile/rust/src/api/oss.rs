@@ -15,7 +15,7 @@ pub async fn core_upload_file(
         None
     };
 
-    use xilulu_core::api::oss::upload_file;
+    use xilulu_im_sdk::api::oss::upload_file;
     match upload_file(
         &GLOBAL_API_CLIENT,
         file_bytes,

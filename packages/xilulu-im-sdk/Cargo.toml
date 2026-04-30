@@ -1,5 +1,5 @@
 [package]
-name = "xilulu_core"
+name = "xilulu_im_sdk"
 version = "0.1.0"
 edition = "2021"
 description = "Core business logic, abstract state, models, and network calls independent of Dioxus UI"

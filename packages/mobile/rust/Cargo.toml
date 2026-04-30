@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-xilulu_core = { path = "../../core" }
+xilulu_im_sdk = { path = "../../xilulu-im-sdk" }
 flutter_rust_bridge = "=2.12.0" # You might need to adjust this depending on codegen version
 tokio = { version = "1.28", features = ["rt", "macros", "sync"] }
 serde_json = "1.0.149"

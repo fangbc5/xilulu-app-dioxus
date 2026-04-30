@@ -64,15 +64,15 @@ fn parse_server_path(path: &str) -> Route {
 pub fn MobileMain(tab: String) -> Element {
     super::common::use_auth_guard();
 
-    let core_app = use_context::<std::sync::Arc<xilulu_core::service::app::CoreApp>>();
+    let core_app = use_context::<std::sync::Arc<xilulu_im_sdk::service::app::CoreApp>>();
     let api_client = core_app.api_client.clone();
 
     let menus_resource = use_resource(move || {
         let api = api_client.clone();
         async move {
-            match xilulu_core::api::identity::get_user_menus(&api, CLIENT_APP_ID, None).await {
+            match xilulu_im_sdk::api::identity::get_user_menus(&api, CLIENT_APP_ID, None).await {
                 Ok(data) => {
-                    let menus: Vec<xilulu_core::api::identity::ResourceInfo> = data;
+                    let menus: Vec<xilulu_im_sdk::api::identity::ResourceInfo> = data;
                     menus
                         .into_iter()
                         .filter(|itm| itm.resource_type.as_deref() == Some("20"))

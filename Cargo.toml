@@ -1,16 +1,17 @@
 [workspace]
 resolver = "2"
 members = [
-    "packages/core",
+    "packages/xilulu-im-sdk",
     "packages/ui",
     "packages/web",
     "packages/desktop",
     "packages/mobile/rust",
+    "packages/console",
 ]
 
 [workspace.dependencies]
 dioxus = { version = "0.7.1" }
-xilulu_core = { path = "packages/core" }
+xilulu_im_sdk = { path = "packages/xilulu-im-sdk" }
 
 # workspace
 ui = { path = "packages/ui" }

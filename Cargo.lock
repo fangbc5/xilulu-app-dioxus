@@ -542,6 +542,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "dioxus-free-icons",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "console_error_panic_hook"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4778,7 +4788,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "xilulu_core",
+ "xilulu_im_sdk",
 ]
 
 [[package]]
@@ -6249,7 +6259,7 @@ dependencies = [
  "sled",
  "tokio",
  "tracing",
- "xilulu_core",
+ "xilulu_im_sdk",
 ]
 
 [[package]]
@@ -7392,7 +7402,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea6fc2961e4ef194dcbfe56bb845534d0dc8098940c7e5c012a258bfec6701bd"
 
 [[package]]
-name = "xilulu_core"
+name = "xilulu_im_sdk"
 version = "0.1.0"
 dependencies = [
  "async-trait",
