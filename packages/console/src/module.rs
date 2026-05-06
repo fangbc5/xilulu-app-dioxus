@@ -56,10 +56,12 @@ pub enum CommandCategory {
     Navigation,
     /// 创建/编辑等操作
     Action,
-    /// 搜索
+    /// 搜索 (预留)
+    #[allow(dead_code)]
     Search,
 }
 
+#[allow(dead_code)]
 impl CommandCategory {
     pub fn label(&self) -> &'static str {
         match self {

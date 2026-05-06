@@ -14,7 +14,7 @@ mod views;
 
 use dioxus::prelude::*;
 use modules::team::TeamModule;
-use registry::{build_registry, RegistryData};
+use registry::build_registry;
 use routes::Route;
 use theme::{Theme, ThemeProvider};
 

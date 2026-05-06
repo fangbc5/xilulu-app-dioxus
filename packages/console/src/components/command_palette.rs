@@ -9,6 +9,7 @@ use dioxus::prelude::*;
 /// 命令面板全局状态
 #[derive(Clone, Copy)]
 pub struct CommandPaletteState {
+    #[allow(dead_code)]
     pub is_open: Signal<bool>,
 }
 

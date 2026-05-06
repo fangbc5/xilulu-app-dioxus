@@ -30,6 +30,24 @@ impl ConsoleModule for TeamModule {
     fn nav_items(&self) -> Vec<NavItem> {
         vec![
             NavItem {
+                label: "驾驶舱".to_string(),
+                path: "/".to_string(),
+                icon: "🚀".to_string(),
+                badge: None,
+            },
+            NavItem {
+                label: "人员管理".to_string(),
+                path: "/people".to_string(),
+                icon: "👥".to_string(),
+                badge: Some(3),
+            },
+            NavItem {
+                label: "组织地图".to_string(),
+                path: "/atlas".to_string(),
+                icon: "🗺️".to_string(),
+                badge: None,
+            },
+            NavItem {
                 label: "组织".to_string(),
                 path: "/team/orgs".to_string(),
                 icon: "🏢".to_string(),
@@ -65,6 +83,13 @@ impl ConsoleModule for TeamModule {
     fn commands(&self) -> Vec<Command> {
         vec![
             // 导航命令
+            Command {
+                name: "打开组织地图".to_string(),
+                description: "查看 Atlas 组织拓扑".to_string(),
+                icon: "map".to_string(),
+                category: CommandCategory::Navigation,
+                action: CommandAction::Navigate("/atlas".to_string()),
+            },
             Command {
                 name: "打开组织管理".to_string(),
                 description: "查看组织列表".to_string(),

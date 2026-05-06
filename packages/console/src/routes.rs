@@ -5,7 +5,9 @@
 
 use dioxus::prelude::*;
 use crate::layout::ConsoleLayout;
+use crate::views::atlas::AtlasView;
 use crate::views::cockpit::CockpitView;
+use crate::views::people::PeopleView;
 use crate::modules::team::views::*;
 
 /// 控制台路由定义
@@ -17,6 +19,12 @@ pub enum Route {
         // === 框架级路由 ===
         #[route("/")]
         CockpitView {},
+
+        #[route("/people")]
+        PeopleView {},
+
+        #[route("/atlas")]
+        AtlasView {},
 
         // === ms-team 模块路由 ===
         #[route("/team/orgs")]
