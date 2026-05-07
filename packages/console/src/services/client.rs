@@ -1,6 +1,8 @@
 //! HTTP 客户端封装
 //!
 //! 基于 gloo-net 的 WASM 兼容 HTTP 客户端。
+//! 支持 access_token / refresh_token 双令牌管理，
+//! 401 自动刷新重试。
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -43,8 +45,10 @@ pub struct ApiClient {
     base_url: String,
     /// ms-auth 服务地址（默认与 base_url 相同）
     auth_url: String,
-    /// 访问令牌
-    token: Rc<RefCell<String>>,
+    /// 访问令牌（用于 Authorization 请求头）
+    access_token: Rc<RefCell<String>>,
+    /// 刷新令牌（用于 access_token 过期时刷新）
+    refresh_token: Rc<RefCell<String>>,
 }
 
 impl ApiClient {
@@ -56,7 +60,8 @@ impl ApiClient {
         Self {
             auth_url: url.clone(),
             base_url: url,
-            token: Rc::new(RefCell::new(String::new())),
+            access_token: Rc::new(RefCell::new(String::new())),
+            refresh_token: Rc::new(RefCell::new(String::new())),
         }
     }
 
@@ -66,14 +71,25 @@ impl ApiClient {
         self
     }
 
-    /// 设置 token
+    /// 设置 access_token
     pub fn set_token(&self, token: &str) {
-        *self.token.borrow_mut() = token.to_string();
+        log::debug!("🔑 ApiClient.set_token: {}...{} chars", &token[..8.min(token.len())], token.len());
+        *self.access_token.borrow_mut() = token.to_string();
     }
 
-    /// 获取当前 token
+    /// 获取当前 access_token
     pub fn get_token(&self) -> String {
-        self.token.borrow().clone()
+        self.access_token.borrow().clone()
+    }
+
+    /// 设置 refresh_token
+    pub fn set_refresh_token(&self, token: &str) {
+        *self.refresh_token.borrow_mut() = token.to_string();
+    }
+
+    /// 获取当前 refresh_token
+    pub fn get_refresh_token(&self) -> String {
+        self.refresh_token.borrow().clone()
     }
 
     /// 创建默认客户端（连接本地 ms-team）
@@ -98,8 +114,167 @@ impl ApiClient {
         format!("{}{}", base.trim_end_matches('/'), path)
     }
 
-    /// GET 请求（自动附带 token）
+    // ================================================================
+    // Token 自动刷新
+    // ================================================================
+
+    /// 用 refresh_token 刷新 access_token。
+    /// 成功返回 true 并更新内部 access_token；失败返回 false。
+    async fn try_refresh_token(&self) -> bool {
+        let rt = self.get_refresh_token();
+        if rt.is_empty() {
+            log::warn!("🔑 try_refresh_token: refresh_token 为空，无法刷新");
+            return false;
+        }
+
+        log::info!("🔑 access_token 过期，正在用 refresh_token 刷新...");
+
+        let url = self.resolve_url("/api/v1/auth/refresh-token");
+
+        #[derive(Debug, Serialize)]
+        struct Body {
+            refresh_token: String,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct Resp {
+            data: Option<RefreshData>,
+        }
+        #[derive(Debug, serde::Deserialize)]
+        struct RefreshData {
+            access_token: String,
+            refresh_token: Option<String>,
+        }
+
+        let body = serde_json::to_string(&Body { refresh_token: rt }).unwrap();
+        let resp = match Request::post(&url)
+            .header("Content-Type", "application/json")
+            .body(body)
+        {
+            Ok(req) => match req.send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    log::error!("🔑 refresh token 请求发送失败: {e}");
+                    return false;
+                }
+            },
+            Err(e) => {
+                log::error!("🔑 refresh token 请求构建失败: {e}");
+                return false;
+            }
+        };
+
+        let status = resp.status();
+        let text = match resp.text().await {
+            Ok(t) => t,
+            Err(e) => {
+                log::error!("🔑 refresh token 读取响应失败: {e}");
+                return false;
+            }
+        };
+
+        if status != 200 {
+            log::warn!("🔑 refresh token 失败 (status={status}): {text}");
+            return false;
+        }
+
+        match serde_json::from_str::<Resp>(&text) {
+            Ok(resp) => {
+                if let Some(data) = resp.data {
+                    log::info!(
+                        "🔑 token 刷新成功，新 access_token: {}...",
+                        &data.access_token[..8.min(data.access_token.len())]
+                    );
+                    self.set_token(&data.access_token);
+                    // 服务端可能返回新的 refresh_token，也可能沿用旧的
+                    if let Some(new_rt) = data.refresh_token {
+                        self.set_refresh_token(&new_rt);
+                    }
+                    true
+                } else {
+                    log::warn!("🔑 refresh 响应缺少 data 字段");
+                    false
+                }
+            }
+            Err(e) => {
+                log::error!("🔑 refresh 响应 JSON 解析失败: {e}");
+                false
+            }
+        }
+    }
+
+    // ================================================================
+    // HTTP 方法（带 401 自动刷新重试）
+    // ================================================================
+
+    /// GET 请求（自动附带 token，401 自动刷新重试）
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, ApiError> {
+        let result = self.get_inner::<T>(path).await;
+        self.retry_on_401(path, result, || self.get_inner::<T>(path))
+            .await
+    }
+
+    /// POST 请求（自动附带 token，401 自动刷新重试）
+    pub async fn post<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, ApiError> {
+        let json = serde_json::to_string(body)?;
+        let result = self.post_inner::<T>(path, &json).await;
+        self.retry_on_401(path, result, || self.post_inner::<T>(path, &json))
+            .await
+    }
+
+    /// PUT 请求（自动附带 token，401 自动刷新重试）
+    pub async fn put<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, ApiError> {
+        let json = serde_json::to_string(body)?;
+        let result = self.put_inner::<T>(path, &json).await;
+        self.retry_on_401(path, result, || self.put_inner::<T>(path, &json))
+            .await
+    }
+
+    /// DELETE 请求（自动附带 token，401 自动刷新重试）
+    pub async fn delete<T: DeserializeOwned>(&self, path: &str) -> Result<T, ApiError> {
+        let result = self.delete_inner::<T>(path).await;
+        self.retry_on_401(path, result, || self.delete_inner::<T>(path))
+            .await
+    }
+
+    /// 401 自动刷新重试：收到 401 时先尝试刷新 token，成功则重试一次原请求
+    async fn retry_on_401<T: DeserializeOwned, F, Fut>(
+        &self,
+        path: &str,
+        first_result: Result<T, ApiError>,
+        retry_fn: F,
+    ) -> Result<T, ApiError>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T, ApiError>>,
+    {
+        match first_result {
+            Err(ApiError::Unauthorized) => {
+                log::warn!("🔑 请求 {path} 返回 401，尝试刷新 token...");
+                if self.try_refresh_token().await {
+                    log::info!("🔑 token 刷新成功，重试请求 {path}");
+                    retry_fn().await
+                } else {
+                    log::warn!("🔑 token 刷新失败，返回 Unauthorized");
+                    Err(ApiError::Unauthorized)
+                }
+            }
+            other => other,
+        }
+    }
+
+    // ================================================================
+    // 内部请求方法（无重试）
+    // ================================================================
+
+    async fn get_inner<T: DeserializeOwned>(&self, path: &str) -> Result<T, ApiError> {
         let url = self.resolve_url(path);
         let token = self.get_token();
         let mut req = Request::get(&url)
@@ -115,15 +290,13 @@ impl ApiClient {
         self.handle_response(resp).await
     }
 
-    /// POST 请求（自动附带 token）
-    pub async fn post<T: DeserializeOwned, B: Serialize>(
+    async fn post_inner<T: DeserializeOwned>(
         &self,
         path: &str,
-        body: &B,
+        json: &str,
     ) -> Result<T, ApiError> {
         let url = self.resolve_url(path);
         let token = self.get_token();
-        let json = serde_json::to_string(body)?;
         let mut req = Request::post(&url)
             .header("Content-Type", "application/json")
             .header("Accept", "application/json");
@@ -131,7 +304,7 @@ impl ApiClient {
             req = req.header("Authorization", &format!("Bearer {token}"));
         }
         let resp = req
-            .body(json)
+            .body(json.to_string())
             .map_err(|e| ApiError::Network(e.to_string()))?
             .send()
             .await
@@ -139,15 +312,13 @@ impl ApiClient {
         self.handle_response(resp).await
     }
 
-    /// PUT 请求（自动附带 token）
-    pub async fn put<T: DeserializeOwned, B: Serialize>(
+    async fn put_inner<T: DeserializeOwned>(
         &self,
         path: &str,
-        body: &B,
+        json: &str,
     ) -> Result<T, ApiError> {
         let url = self.resolve_url(path);
         let token = self.get_token();
-        let json = serde_json::to_string(body)?;
         let mut req = Request::put(&url)
             .header("Content-Type", "application/json")
             .header("Accept", "application/json");
@@ -155,7 +326,7 @@ impl ApiClient {
             req = req.header("Authorization", &format!("Bearer {token}"));
         }
         let resp = req
-            .body(json)
+            .body(json.to_string())
             .map_err(|e| ApiError::Network(e.to_string()))?
             .send()
             .await
@@ -163,8 +334,7 @@ impl ApiClient {
         self.handle_response(resp).await
     }
 
-    /// DELETE 请求（自动附带 token）
-    pub async fn delete<T: DeserializeOwned>(&self, path: &str) -> Result<T, ApiError> {
+    async fn delete_inner<T: DeserializeOwned>(&self, path: &str) -> Result<T, ApiError> {
         let url = self.resolve_url(path);
         let token = self.get_token();
         let mut req = Request::delete(&url)
@@ -189,7 +359,10 @@ impl ApiClient {
         if status == 401 {
             return Err(ApiError::Unauthorized);
         }
-        let text = resp.text().await.map_err(|e| ApiError::Network(e.to_string()))?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| ApiError::Network(e.to_string()))?;
         if status >= 400 {
             if let Ok(err_resp) = serde_json::from_str::<serde_json::Value>(&text) {
                 let message = err_resp

@@ -77,6 +77,9 @@ fn CommandPaletteOverlay(
     // LLM 配置（从 localStorage 或默认值）
     let llm_config = use_signal(LlmConfig::default);
 
+    // 共享 API 客户端（携带当前 access_token）
+    let api_client = use_context::<ApiClient>();
+
     // 检测 Executing 状态 → 异步调用 API
     let is_executing = matches!(conversation.read().state, ConversationState::Executing { .. });
     use_effect(move || {
@@ -87,7 +90,7 @@ fn CommandPaletteOverlay(
             ConversationState::Executing { intent } => intent.clone(),
             _ => return,
         };
-        let client = ApiClient::default();
+        let client = api_client.clone();
         spawn(async move {
             let result = executor::execute_intent(&client, &intent, 1).await;
             conversation.write().apply_execution_result(

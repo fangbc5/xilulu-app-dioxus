@@ -55,11 +55,14 @@ fn App() -> Element {
         }
     });
 
-    // 全局 API 客户端
+    // 全局 API 客户端（同时设置 access_token 和 refresh_token）
     let api_client = use_hook(|| {
-        let mut client = ApiClient::new("http://localhost:8080");
+        let client = ApiClient::new("http://localhost:8080");
         if !init_access.is_empty() {
             client.set_token(&init_access);
+        }
+        if !init_refresh.is_empty() {
+            client.set_refresh_token(&init_refresh);
         }
         client
     });

@@ -97,6 +97,9 @@ pub struct ListDepartmentsQuery {
 
 impl ApiClient {
     /// 获取部门列表
+    ///
+    /// 服务端返回 `R<CursorPageBaseResp<DepartmentResponse>>`，
+    /// 即 `{ data: { cursor, has_next, list: [...], total } }`。
     pub async fn list_departments(
         &self,
         query: &ListDepartmentsQuery,
@@ -105,50 +108,66 @@ impl ApiClient {
         let path = format!("/api/v1/team/departments{}", query_str);
 
         #[derive(Debug, Deserialize)]
+        struct Page {
+            list: Vec<DepartmentResponse>,
+        }
+        #[derive(Debug, Deserialize)]
         struct Resp {
-            pub data: Option<Vec<DepartmentResponse>>,
-            pub list: Option<Vec<DepartmentResponse>>,
+            data: Option<Page>,
         }
 
         let resp: Resp = self.get(&path).await?;
-        Ok(resp.data.or(resp.list).unwrap_or_default())
+        Ok(resp.data.map(|p| p.list).unwrap_or_default())
     }
 
     /// 获取根部门列表
+    ///
+    /// 服务端返回 `R<Vec<DepartmentResponse>>`，data 直接是数组。
     pub async fn get_root_departments(&self, org_id: i64) -> Result<Vec<DepartmentResponse>, ApiError> {
         #[derive(Debug, Deserialize)]
         struct Resp {
-            pub data: Option<Vec<DepartmentResponse>>,
-            pub list: Option<Vec<DepartmentResponse>>,
+            data: Option<Vec<DepartmentResponse>>,
         }
 
         let resp: Resp = self
-            .get(&format!(
-                "/api/v1/team/departments/roots?orgId={}",
-                org_id
-            ))
+            .get(&format!("/api/v1/team/departments/roots?org_id={}", org_id))
             .await?;
-        Ok(resp.data.or(resp.list).unwrap_or_default())
+        Ok(resp.data.unwrap_or_default())
     }
 
     /// 获取部门树
+    ///
+    /// 服务端返回 `R<Vec<DepartmentTreeNode>>`，data 直接是数组。
     pub async fn get_department_tree(
         &self,
         org_id: i64,
     ) -> Result<Vec<DepartmentTreeNode>, ApiError> {
         #[derive(Debug, Deserialize)]
         struct Resp {
-            pub data: Option<Vec<DepartmentTreeNode>>,
-            pub list: Option<Vec<DepartmentTreeNode>>,
+            data: Option<Vec<DepartmentTreeNode>>,
         }
 
         let resp: Resp = self
-            .get(&format!(
-                "/api/v1/team/departments/tree?orgId={}",
-                org_id
-            ))
+            .get(&format!("/api/v1/team/departments/tree?org_id={}", org_id))
             .await?;
-        Ok(resp.data.or(resp.list).unwrap_or_default())
+        Ok(resp.data.unwrap_or_default())
+    }
+
+    /// 统计部门数量（page_size=1，从分页响应的 total 字段获取总数）
+    pub async fn count_departments(&self, org_id: i64) -> Result<u32, ApiError> {
+        let path = format!("/api/v1/team/departments?org_id={}&page_size=1&cursor=1", org_id);
+
+        #[derive(Debug, Deserialize)]
+        struct Page {
+            total: Option<i64>,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Resp {
+            data: Option<Page>,
+        }
+
+        let resp: Resp = self.get(&path).await?;
+        Ok(resp.data.and_then(|d| d.total).unwrap_or(0) as u32)
     }
 
     /// 获取单个部门详情
@@ -172,21 +191,17 @@ impl ApiClient {
     ) -> Result<Vec<DepartmentResponse>, ApiError> {
         #[derive(Debug, Deserialize)]
         struct Resp {
-            pub data: Option<Vec<DepartmentResponse>>,
-            pub list: Option<Vec<DepartmentResponse>>,
+            data: Option<Vec<DepartmentResponse>>,
         }
 
         let resp: Resp = self
             .get(&format!("/api/v1/team/departments/{}/children", id))
             .await?;
-        Ok(resp.data.or(resp.list).unwrap_or_default())
+        Ok(resp.data.unwrap_or_default())
     }
 
     /// 创建部门
-    pub async fn create_department(
-        &self,
-        req: &CreateDepartmentRequest,
-    ) -> Result<i64, ApiError> {
+    pub async fn create_department(&self, req: &CreateDepartmentRequest) -> Result<i64, ApiError> {
         #[derive(Debug, Deserialize)]
         struct Resp {
             pub data: Option<i64>,
@@ -205,14 +220,12 @@ impl ApiClient {
         id: i64,
         req: &UpdateDepartmentRequest,
     ) -> Result<(), ApiError> {
-        self.put(&format!("/api/v1/team/departments/{}", id), req)
-            .await
+        self.put(&format!("/api/v1/team/departments/{}", id), req).await
     }
 
     /// 删除部门
     pub async fn delete_department(&self, id: i64) -> Result<(), ApiError> {
-        self.delete(&format!("/api/v1/team/departments/{}", id))
-            .await
+        self.delete(&format!("/api/v1/team/departments/{}", id)).await
     }
 }
 
@@ -221,10 +234,10 @@ fn build_query(query: &ListDepartmentsQuery) -> String {
     let mut parts = Vec::new();
 
     if let Some(v) = query.org_id {
-        parts.push(format!("orgId={}", v));
+        parts.push(format!("org_id={}", v));
     }
     if let Some(v) = query.parent_id {
-        parts.push(format!("parentId={}", v));
+        parts.push(format!("parent_id={}", v));
     }
     if let Some(ref v) = query.keyword {
         if !v.is_empty() {
@@ -235,7 +248,7 @@ fn build_query(query: &ListDepartmentsQuery) -> String {
         parts.push(format!("status={}", v));
     }
     if let Some(v) = query.page_size {
-        parts.push(format!("pageSize={}", v));
+        parts.push(format!("page_size={}", v));
     }
     if let Some(v) = query.cursor {
         parts.push(format!("cursor={}", v));

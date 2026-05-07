@@ -12,135 +12,79 @@ pub use pending::{PendingItem, PendingType, PendingList};
 pub use timeline::{Activity, ActivityType, ActivityTimeline};
 
 use crate::components::stat_card::StatCard;
+use crate::module::CockpitCard;
 use crate::registry::RegistryData;
+use crate::services::auth::UserInfo;
 use crate::services::client::ApiClient;
-use crate::services::department::ListDepartmentsQuery;
-use crate::services::employee::ListEmployeesQuery;
 use dioxus::prelude::*;
+
+/// 根据当前小时数返回问候语
+fn get_greeting() -> &'static str {
+    let hour = js_sys::Date::new(&0.into()).get_hours() as u8;
+    match hour {
+        0..=5 => "夜深了",
+        6..=11 => "Good morning",
+        12..=17 => "Good afternoon",
+        18..=22 => "Good evening",
+        _ => "夜深了",
+    }
+}
 
 /// CockpitView 驾驶舱视图
 #[component]
 pub fn CockpitView() -> Element {
     let registry = use_context::<RegistryData>();
-    let cards = registry.cockpit_cards.clone();
+
+    // 从 context 获取当前用户信息
+    let user_info: Signal<Option<UserInfo>> = use_context();
+    let user_name = user_info()
+        .map(|u| u.nickname.clone())
+        .unwrap_or_else(|| "用户".to_string());
+    let greeting = get_greeting();
 
     // 从 API 获取统计数据
     let api_client = use_context::<ApiClient>();
     let stats_resource = use_resource(move || {
         let client = api_client.clone();
         async move {
-            let emp_query = ListEmployeesQuery {
-                org_id: Some(1),
-                department_id: None,
-                include_children: None,
-                position_id: None,
-                status: None,
-                keyword: None,
-                page_size: Some(1000),
-                cursor: None,
-            };
-            let dept_query = ListDepartmentsQuery {
-                org_id: Some(1),
-                parent_id: None,
-                keyword: None,
-                status: None,
-                page_size: Some(1000),
-                cursor: None,
-            };
-
-            let emp_count = client.list_employees(&emp_query)
-                .await
-                .map(|l| l.len() as u32)
-                .unwrap_or(0);
-            let dept_count = client.list_departments(&dept_query)
-                .await
-                .map(|l| l.len() as u32)
-                .unwrap_or(0);
-
+            let emp_count = client.count_employees(1).await.unwrap_or(0);
+            let dept_count = client.count_departments(1).await.unwrap_or(0);
             (emp_count, dept_count)
         }
     });
 
-    let (employee_count, _department_count) = stats_resource()
+    let (employee_count, department_count) = stats_resource()
         .map(|(e, d)| (e, d))
         .unwrap_or((0, 0));
 
+    // 用真实 API 数据覆盖模块注册卡片中的硬编码值
+    let cards: Vec<CockpitCard> = registry.cockpit_cards.iter().map(|card| {
+        let mut c = card.clone();
+        match c.title.as_str() {
+            "在职员工" => {
+                c.value = employee_count.to_string();
+                c.trend = if employee_count > 0 { None } else { c.trend.take() };
+            }
+            "部门数量" => {
+                c.value = department_count.to_string();
+                c.trend = None;
+            }
+            _ => {}
+        }
+        c
+    }).collect();
+
     let pulse_data = PulseData {
-        total_count: if employee_count > 0 { employee_count } else { 368 },
-        trend: 12,
+        total_count: employee_count,
+        trend: 0,
         trend_label: "本周".to_string(),
-        vitality: 87,
-        trend_percent: 3.2,
+        vitality: if employee_count > 0 { 85u8.min(60 + (employee_count / 10) as u8) } else { 0 },
+        trend_percent: 0.0,
     };
 
-    // 模拟待处理数据
-    let pending_items = vec![
-        PendingItem {
-            id: 1,
-            r#type: PendingType::NewEmployee,
-            title: "3 位新员工等待部门分配".to_string(),
-            description: "王五、赵六、孙七".to_string(),
-            time: "今天".to_string(),
-        },
-        PendingItem {
-            id: 2,
-            r#type: PendingType::DepartmentRequest,
-            title: "产品部申请增设\"体验设计组\"".to_string(),
-            description: "申请中，等待审批".to_string(),
-            time: "昨天".to_string(),
-        },
-        PendingItem {
-            id: 3,
-            r#type: PendingType::TransferRequest,
-            title: "2 位员工调岗申请待审批".to_string(),
-            description: "李四: 产品 > 运营".to_string(),
-            time: "2天前".to_string(),
-        },
-    ];
-
-    // 模拟活动数据
-    let activities = vec![
-        Activity {
-            id: 1,
-            r#type: ActivityType::Create,
-            actor: "fangbc".to_string(),
-            target: "张伟".to_string(),
-            target_type: "员工".to_string(),
-            time: "10:30".to_string(),
-            time_ago: "刚刚".to_string(),
-        },
-        Activity {
-            id: 2,
-            r#type: ActivityType::Transfer,
-            actor: "admin".to_string(),
-            target: "市场部".to_string(),
-            target_type: "部门".to_string(),
-            time: "09:45".to_string(),
-            time_ago: "1小时前".to_string(),
-        },
-        Activity {
-            id: 3,
-            r#type: ActivityType::Update,
-            actor: "fangbc".to_string(),
-            target: "AI实验室".to_string(),
-            target_type: "部门".to_string(),
-            time: "昨天".to_string(),
-            time_ago: "昨天".to_string(),
-        },
-        Activity {
-            id: 4,
-            r#type: ActivityType::View,
-            actor: "admin".to_string(),
-            target: "王五".to_string(),
-            target_type: "员工".to_string(),
-            time: "昨天".to_string(),
-            time_ago: "昨天".to_string(),
-        },
-    ];
-
-    // 获取问候语
-    let greeting = "Good evening";
-    let user_name = "fangbc";
+    // 待处理和活动数据（暂无服务端 API，留空列表）
+    let pending_items: Vec<PendingItem> = vec![];
+    let activities: Vec<Activity> = vec![];
 
     rsx! {
         div { style: "max-width: 1200px; margin: 0 auto; width: 100%;",
@@ -155,7 +99,7 @@ pub fn CockpitView() -> Element {
                     "{greeting}, {user_name}"
                 }
                 p { style: "color: var(--ds-text-tertiary); font-size: 13.5px;",
-                    "Xilulu Console - 管理你的组织和团队"
+                    "Xilulu Console — 管理你的组织和团队 · {employee_count} 名员工 · {department_count} 个部门"
                 }
             }
 
@@ -165,7 +109,7 @@ pub fn CockpitView() -> Element {
                 // 左侧：统计卡片 + 活动时间线
                 div { style: "display: flex; flex-direction: column; gap: 24px;",
 
-                    // 统计卡片网格
+                    // 统计卡片网格 — 用真实 API 数据
                     if !cards.is_empty() {
                         div {
                             class: "cockpit-cards-grid",

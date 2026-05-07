@@ -125,6 +125,9 @@ pub struct ListEmployeesQuery {
 
 impl ApiClient {
     /// 获取员工列表
+    ///
+    /// 服务端返回 `R<CursorPageBaseResp<EmployeeResponse>>`，
+    /// 即 `{ data: { cursor, has_next, list: [...], total } }`。
     pub async fn list_employees(
         &self,
         query: &ListEmployeesQuery,
@@ -133,13 +136,33 @@ impl ApiClient {
         let path = format!("/api/v1/team/employees{}", query_str);
 
         #[derive(Debug, Deserialize)]
+        struct Page {
+            list: Vec<EmployeeResponse>,
+        }
+        #[derive(Debug, Deserialize)]
         struct Resp {
-            pub data: Option<Vec<EmployeeResponse>>,
-            pub list: Option<Vec<EmployeeResponse>>,
+            data: Option<Page>,
         }
 
         let resp: Resp = self.get(&path).await?;
-        Ok(resp.data.or(resp.list).unwrap_or_default())
+        Ok(resp.data.map(|p| p.list).unwrap_or_default())
+    }
+
+    /// 统计员工数量（page_size=1，从分页响应的 total 字段获取总数）
+    pub async fn count_employees(&self, org_id: i64) -> Result<u32, ApiError> {
+        let path = format!("/api/v1/team/employees?org_id={}&page_size=1&cursor=1", org_id);
+
+        #[derive(Debug, Deserialize)]
+        struct Page {
+            total: Option<i64>,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Resp {
+            data: Option<Page>,
+        }
+
+        let resp: Resp = self.get(&path).await?;
+        Ok(resp.data.and_then(|d| d.total).unwrap_or(0) as u32)
     }
 
     /// 获取单个员工详情
@@ -267,16 +290,16 @@ fn build_employee_query(query: &ListEmployeesQuery) -> String {
     let mut parts = Vec::new();
 
     if let Some(v) = query.org_id {
-        parts.push(format!("orgId={}", v));
+        parts.push(format!("org_id={}", v));
     }
     if let Some(v) = query.department_id {
-        parts.push(format!("departmentId={}", v));
+        parts.push(format!("department_id={}", v));
     }
     if let Some(v) = query.include_children {
-        parts.push(format!("includeChildren={}", v));
+        parts.push(format!("include_children={}", v));
     }
     if let Some(v) = query.position_id {
-        parts.push(format!("positionId={}", v));
+        parts.push(format!("position_id={}", v));
     }
     if let Some(v) = query.status {
         parts.push(format!("status={}", v));
@@ -287,7 +310,7 @@ fn build_employee_query(query: &ListEmployeesQuery) -> String {
         }
     }
     if let Some(v) = query.page_size {
-        parts.push(format!("pageSize={}", v));
+        parts.push(format!("page_size={}", v));
     }
     if let Some(v) = query.cursor {
         parts.push(format!("cursor={}", v));
