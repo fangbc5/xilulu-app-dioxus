@@ -7,8 +7,9 @@ pub mod force_simulation;
 pub mod org_node;
 
 use crate::components::page_header::PageHeader;
+use crate::services::client::ApiClient;
 use crate::views::atlas::canvas::OrgCanvas;
-use crate::views::atlas::org_node::{OrgNode, OrgNodeType, HISTORY_MONTHS};
+use crate::views::atlas::org_node::{DragChangePreview, OrgNode, OrgNodeType, HISTORY_MONTHS};
 use dioxus::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,13 +19,65 @@ pub enum AtlasViewMode {
     Timeline,
 }
 
+/// 子节点排序模式
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SortMode {
+    /// 默认顺序（原始数据顺序）
+    Default,
+    /// 按名称排序
+    Name,
+    /// 按人数降序
+    Headcount,
+    /// 按增长率降序
+    Growth,
+}
+
 /// AtlasView 组织地图视图
 #[component]
 pub fn AtlasView() -> Element {
-    let mut tree = use_signal(build_mock_org_tree);
-    let mut selected_node_id = use_signal(|| Some(1_u64));
+    let api_client = use_context::<ApiClient>();
+    let mut tree_resource = use_resource(move || {
+        let client = api_client.clone();
+        async move {
+            match client.get_department_tree(1).await {
+                Ok(nodes) => {
+                    let org_nodes = OrgNode::from_api_tree(nodes, None);
+                    if org_nodes.len() == 1 {
+                        org_nodes.into_iter().next().unwrap()
+                    } else if !org_nodes.is_empty() {
+                        // 多棵树时用一个虚拟根节点包裹
+                        let mut root = OrgNode::root(0, "全部组织");
+                        for node in org_nodes {
+                            root.add_child(node);
+                        }
+                        root.refresh_rollup_metrics();
+                        root
+                    } else {
+                        build_mock_org_tree()
+                    }
+                }
+                Err(_) => build_mock_org_tree(),
+            }
+        }
+    });
+
+    let mut tree = use_signal(|| build_mock_org_tree());
+    let mut selected_node_id = use_signal(|| None::<u64>);
+    let mut data_loaded = use_signal(|| false);
+
+    // 当 resource 数据就绪时，写入 tree signal
+    if let Some(data) = tree_resource() {
+        if !data_loaded() {
+            let first_id = Some(data.id);
+            tree.set(data);
+            selected_node_id.set(first_id);
+            data_loaded.set(true);
+        }
+    }
     let mut view_mode = use_signal(|| AtlasViewMode::Topology);
     let timeline_index = use_signal(|| HISTORY_MONTHS.len() - 1);
+    let mut change_preview = use_signal::<Option<DragChangePreview>>(|| None);
+    let mut sort_mode = use_signal(|| SortMode::Default);
     let navigator = use_navigator();
 
     let (selected_node, visible_nodes, expanded_branches, total_people, portfolio_growth) = {
@@ -47,9 +100,7 @@ pub fn AtlasView() -> Element {
     };
 
     rsx! {
-        div {
-            class: "atlas-page",
-            style: "width: 100%;",
+        div { class: "atlas-page", style: "width: 100%;",
 
             div {
                 class: "atlas-shell",
@@ -77,21 +128,67 @@ pub fn AtlasView() -> Element {
                     ",
                     div {
                         class: "atlas-toolbar-left",
-                        style: "display: flex; flex-wrap: wrap; gap: 10px;",
-                        ViewModeChip {
-                            label: "拓扑视图",
-                            active: view_mode() == AtlasViewMode::Topology,
-                            onclick: move || view_mode.set(AtlasViewMode::Topology),
+                        style: "display: flex; flex-wrap: wrap; align-items: center; gap: 10px;",
+
+                        // 视图模式单选组
+                        SegmentedControl {
+                            items: vec![
+                                SegmentedItem {
+                                    label: "拓扑视图",
+                                    active: view_mode() == AtlasViewMode::Topology,
+                                },
+                                SegmentedItem {
+                                    label: "热力视图",
+                                    active: view_mode() == AtlasViewMode::Heatmap,
+                                },
+                                SegmentedItem {
+                                    label: "时间轴",
+                                    active: view_mode() == AtlasViewMode::Timeline,
+                                },
+                            ],
+                            on_select: move |index: usize| {
+                                view_mode
+                                    .set(
+                                        match index {
+                                            1 => AtlasViewMode::Heatmap,
+                                            2 => AtlasViewMode::Timeline,
+                                            _ => AtlasViewMode::Topology,
+                                        },
+                                    );
+                            },
                         }
-                        ViewModeChip {
-                            label: "热力视图",
-                            active: view_mode() == AtlasViewMode::Heatmap,
-                            onclick: move || view_mode.set(AtlasViewMode::Heatmap),
-                        }
-                        ViewModeChip {
-                            label: "时间轴",
-                            active: view_mode() == AtlasViewMode::Timeline,
-                            onclick: move || view_mode.set(AtlasViewMode::Timeline),
+
+                        // 排序模式单选组
+                        SegmentedControl {
+                            items: vec![
+                                SegmentedItem {
+                                    label: "默认排序",
+                                    active: sort_mode() == SortMode::Default,
+                                },
+                                SegmentedItem {
+                                    label: "按名称",
+                                    active: sort_mode() == SortMode::Name,
+                                },
+                                SegmentedItem {
+                                    label: "按人数",
+                                    active: sort_mode() == SortMode::Headcount,
+                                },
+                                SegmentedItem {
+                                    label: "按增长率",
+                                    active: sort_mode() == SortMode::Growth,
+                                },
+                            ],
+                            on_select: move |index: usize| {
+                                sort_mode
+                                    .set(
+                                        match index {
+                                            1 => SortMode::Name,
+                                            2 => SortMode::Headcount,
+                                            3 => SortMode::Growth,
+                                            _ => SortMode::Default,
+                                        },
+                                    );
+                            },
                         }
                     }
 
@@ -143,13 +240,14 @@ pub fn AtlasView() -> Element {
                     ",
                     div {
                         class: "atlas-stage",
-                        style: "display: flex; min-width: 0;",
+                        style: "display: flex; min-width: 0; position: relative;",
                         OrgCanvas {
                             tree: tree(),
                             width: 1080.0,
                             height: 620.0,
                             mode: view_mode(),
                             timeline_index: timeline_index(),
+                            sort_mode: sort_mode(),
                             selected_node_id: selected_node_id(),
                             on_node_click: move |node_id| selected_node_id.set(Some(node_id)),
                             on_node_toggle: move |node_id| {
@@ -158,6 +256,26 @@ pub fn AtlasView() -> Element {
                                 });
                                 selected_node_id.set(Some(node_id));
                             },
+                            on_drag_complete: move |preview| {
+                                change_preview.set(Some(preview));
+                            },
+                        }
+
+                        if let Some(preview) = change_preview() {
+                            ChangePreviewOverlay {
+                                preview,
+                                on_confirm: move || {
+                                    let p = change_preview().unwrap();
+                                    tree.with_mut(|t| {
+                                        t.move_to_parent(p.node_id, p.new_parent_id);
+                                    });
+                                    change_preview.set(None);
+                                    selected_node_id.set(Some(p.node_id));
+                                },
+                                on_cancel: move || {
+                                    change_preview.set(None);
+                                },
+                            }
                         }
                     }
 
@@ -168,16 +286,23 @@ pub fn AtlasView() -> Element {
                             title: "当前视图".to_string(),
                             eyebrow: "Atlas".to_string(),
                             body: match view_mode() {
-                                AtlasViewMode::Topology => "查看组织拓扑，双击节点可展开或收起分支。".to_string(),
-                                AtlasViewMode::Heatmap => "用热度颜色定位扩张、收缩和协作密集的组织区域。".to_string(),
+                                AtlasViewMode::Topology => {
+                                    "查看组织拓扑，双击节点可展开或收起分支。".to_string()
+                                }
+                                AtlasViewMode::Heatmap => {
+                                    "用热度颜色定位扩张、收缩和协作密集的组织区域。"
+                                        .to_string()
+                                }
                                 AtlasViewMode::Timeline => {
                                     let label = HISTORY_MONTHS
                                         .get(timeline_index())
                                         .copied()
                                         .unwrap_or(HISTORY_MONTHS[HISTORY_MONTHS.len() - 1]);
-                                    format!("时间轴已切换到 {label}，节点大小会按当月人数回放。")
+                                    format!(
+                                        "时间轴已切换到 {label}，节点大小会按当月人数回放。",
+                                    )
                                 }
-                            }
+                            },
                         }
 
                         if let Some(node) = selected_node {
@@ -206,35 +331,59 @@ pub fn AtlasView() -> Element {
     }
 }
 
-#[component]
-fn ViewModeChip(
+/// 分段控件中的单个选项
+#[derive(Clone, PartialEq)]
+struct SegmentedItem {
     label: &'static str,
     active: bool,
-    onclick: EventHandler<()>,
-) -> Element {
-    let background = if active {
-        "rgba(16, 185, 129, 0.14)"
-    } else {
-        "var(--ds-bg-surface)"
-    };
-    let color = if active {
-        "var(--ds-accent)"
-    } else {
-        "var(--ds-text-secondary)"
-    };
-    let border = if active {
-        "rgba(16, 185, 129, 0.28)"
-    } else {
-        "var(--ds-border)"
-    };
+}
 
+/// 分段单选控件
+///
+/// 将一组互斥的选项组织在一个带圆角边框的容器中，
+/// 选中项高亮显示，点击即切换。
+#[component]
+fn SegmentedControl(
+    items: Vec<SegmentedItem>,
+    on_select: EventHandler<usize>,
+) -> Element {
     rsx! {
-        button {
-            onclick: move |_| onclick.call(()),
-            style: format!(
-                "padding: 8px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; transition: all var(--ds-transition-fast); background: {background}; color: {color}; border: 1px solid {border};"
-            ),
-            "{label}"
+        div { style: "
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                padding: 3px;
+                border-radius: 10px;
+                background: var(--ds-bg-surface);
+                border: 1px solid var(--ds-border);
+            ",
+
+            for (index , item) in items.iter().enumerate() {
+                {
+                    let background = if item.active {
+                        "rgba(16, 185, 129, 0.14)"
+                    } else {
+                        "transparent"
+                    };
+                    let color = if item.active {
+                        "var(--ds-accent)"
+                    } else {
+                        "var(--ds-text-secondary)"
+                    };
+                    let font_weight = if item.active { "600" } else { "400" };
+
+                    rsx! {
+                        button {
+                            key: "{index}",
+                            onclick: move |_| on_select.call(index),
+                            style: format!(
+                                "padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: {font_weight}; cursor: pointer; transition: all var(--ds-transition-fast); background: {background}; color: {color}; border: none; white-space: nowrap;",
+                            ),
+                            "{item.label}"
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -246,19 +395,11 @@ fn SummaryPill(
     accent: String,
 ) -> Element {
     rsx! {
-        div {
-            style: "display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--ds-bg-surface); border: 1px solid var(--ds-border);",
-            div {
-                style: format!("width: 8px; height: 8px; border-radius: 999px; background: {accent};")
-            }
-            div {
-                style: "display: flex; flex-direction: column; gap: 2px;",
-                div {
-                    style: "font-size: 11px; color: var(--ds-text-tertiary);",
-                    "{label}"
-                }
-                div {
-                    style: "font-size: 13px; font-weight: 600; color: var(--ds-text-primary);",
+        div { style: "display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--ds-bg-surface); border: 1px solid var(--ds-border);",
+            div { style: format!("width: 8px; height: 8px; border-radius: 999px; background: {accent};") }
+            div { style: "display: flex; flex-direction: column; gap: 2px;",
+                div { style: "font-size: 11px; color: var(--ds-text-tertiary);", "{label}" }
+                div { style: "font-size: 13px; font-weight: 600; color: var(--ds-text-primary);",
                     "{value}"
                 }
             }
@@ -274,16 +415,12 @@ fn TimelineControl(
     let max = labels.len().saturating_sub(1);
 
     rsx! {
-        div {
-            style: "display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--ds-radius-md); background: var(--ds-bg-surface); border: 1px solid var(--ds-border);",
-            div {
-                style: "display: flex; align-items: center; justify-content: space-between; gap: 12px;",
-                div {
-                    style: "font-size: 13px; font-weight: 600; color: var(--ds-text-primary);",
+        div { style: "display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--ds-radius-md); background: var(--ds-bg-surface); border: 1px solid var(--ds-border);",
+            div { style: "display: flex; align-items: center; justify-content: space-between; gap: 12px;",
+                div { style: "font-size: 13px; font-weight: 600; color: var(--ds-text-primary);",
                     "组织时间轴"
                 }
-                div {
-                    style: "font-size: 12px; color: var(--ds-accent);",
+                div { style: "font-size: 12px; color: var(--ds-accent);",
                     "{labels.get(current()).cloned().unwrap_or_default()}"
                 }
             }
@@ -301,11 +438,10 @@ fn TimelineControl(
                 },
             }
 
-            div {
-                style: "display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;",
-                for (index, label) in labels.iter().enumerate() {
+            div { style: "display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;",
+                for (index , label) in labels.iter().enumerate() {
                     button {
-                            onclick: move |_| current.set(index),
+                        onclick: move |_| current.set(index),
                         style: format!(
                             "padding: 4px 8px; border-radius: 999px; font-size: 11px; border: 1px solid {}; background: {}; color: {}; cursor: pointer;",
                             if current() == index { "rgba(16, 185, 129, 0.28)" } else { "var(--ds-border)" },
@@ -327,18 +463,14 @@ fn InspectorCard(
     body: String,
 ) -> Element {
     rsx! {
-        div {
-            style: "display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 18px; background: var(--ds-bg-surface); border: 1px solid var(--ds-border);",
-            div {
-                style: "font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ds-text-tertiary);",
+        div { style: "display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 18px; background: var(--ds-bg-surface); border: 1px solid var(--ds-border);",
+            div { style: "font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ds-text-tertiary);",
                 "{eyebrow}"
             }
-            div {
-                style: "font-size: 16px; font-weight: 600; color: var(--ds-text-primary);",
+            div { style: "font-size: 16px; font-weight: 600; color: var(--ds-text-primary);",
                 "{title}"
             }
-            div {
-                style: "font-size: 13px; line-height: 1.6; color: var(--ds-text-secondary);",
+            div { style: "font-size: 13px; line-height: 1.6; color: var(--ds-text-secondary);",
                 "{body}"
             }
         }
@@ -375,26 +507,18 @@ fn SelectedNodePanel(
         .unwrap_or(HISTORY_MONTHS[HISTORY_MONTHS.len() - 1]);
 
     rsx! {
-        div {
-            style: "display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 18px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(148, 163, 184, 0.14);",
-            div {
-                style: "display: flex; flex-direction: column; gap: 6px;",
-                div {
-                    style: "font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(148, 163, 184, 0.82);",
+        div { style: "display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 18px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(148, 163, 184, 0.14);",
+            div { style: "display: flex; flex-direction: column; gap: 6px;",
+                div { style: "font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(148, 163, 184, 0.82);",
                     "{node_type}"
                 }
-                div {
-                    style: "font-size: 20px; font-weight: 600; color: #f8fafc;",
-                    "{node.name}"
-                }
-                div {
-                    style: "font-size: 13px; color: rgba(148, 163, 184, 0.92);",
+                div { style: "font-size: 20px; font-weight: 600; color: #f8fafc;", "{node.name}" }
+                div { style: "font-size: 13px; color: rgba(148, 163, 184, 0.92);",
                     "当前查看 {month_label} · {current_count} 人"
                 }
             }
 
-            div {
-                style: "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;",
+            div { style: "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;",
                 MetricCard {
                     label: "增长率",
                     value: format!("{:+.1}%", node.growth_rate),
@@ -417,17 +541,13 @@ fn SelectedNodePanel(
                 }
             }
 
-            div {
-                style: "display: flex; flex-direction: column; gap: 10px;",
-                div {
-                    style: "font-size: 12px; font-weight: 600; color: rgba(226, 232, 240, 0.9);",
+            div { style: "display: flex; flex-direction: column; gap: 10px;",
+                div { style: "font-size: 12px; font-weight: 600; color: rgba(226, 232, 240, 0.9);",
                     "规模变化"
                 }
-                div {
-                    style: "display: flex; align-items: flex-end; gap: 8px; height: 96px;",
-                    for (index, count) in node.history.iter().enumerate() {
-                        div {
-                            style: "display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;",
+                div { style: "display: flex; align-items: flex-end; gap: 8px; height: 96px;",
+                    for (index , count) in node.history.iter().enumerate() {
+                        div { style: "display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;",
                             div {
                                 style: format!(
                                     "width: 100%; min-height: 16px; height: {:.1}px; border-radius: 10px 10px 4px 4px; background: {};",
@@ -436,15 +556,13 @@ fn SelectedNodePanel(
                                         "linear-gradient(180deg, rgba(52, 211, 153, 0.95), rgba(15, 118, 110, 0.98))"
                                     } else {
                                         "linear-gradient(180deg, rgba(56, 189, 248, 0.42), rgba(30, 41, 59, 0.9))"
-                                    }
-                                )
+                                    },
+                                ),
                             }
-                            div {
-                                style: "font-size: 10px; color: rgba(148, 163, 184, 0.78);",
+                            div { style: "font-size: 10px; color: rgba(148, 163, 184, 0.78);",
                                 "{count}"
                             }
-                            div {
-                                style: "font-size: 10px; color: rgba(148, 163, 184, 0.62);",
+                            div { style: "font-size: 10px; color: rgba(148, 163, 184, 0.62);",
                                 "{HISTORY_MONTHS[index]}"
                             }
                         }
@@ -453,25 +571,18 @@ fn SelectedNodePanel(
             }
 
             if !node.children.is_empty() {
-                div {
-                    style: "display: flex; flex-direction: column; gap: 10px;",
-                    div {
-                        style: "font-size: 12px; font-weight: 600; color: rgba(226, 232, 240, 0.9);",
+                div { style: "display: flex; flex-direction: column; gap: 10px;",
+                    div { style: "font-size: 12px; font-weight: 600; color: rgba(226, 232, 240, 0.9);",
                         "下级结构"
                     }
-                    div {
-                        style: "display: flex; flex-direction: column; gap: 8px;",
+                    div { style: "display: flex; flex-direction: column; gap: 8px;",
                         for child in node.children.iter() {
-                            div {
-                                style: "display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(15, 23, 42, 0.42); border: 1px solid rgba(148, 163, 184, 0.12);",
-                                div {
-                                    style: "display: flex; flex-direction: column; gap: 2px;",
-                                    div {
-                                        style: "font-size: 13px; color: #e2e8f0;",
+                            div { style: "display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(15, 23, 42, 0.42); border: 1px solid rgba(148, 163, 184, 0.12);",
+                                div { style: "display: flex; flex-direction: column; gap: 2px;",
+                                    div { style: "font-size: 13px; color: #e2e8f0;",
                                         "{child.name}"
                                     }
-                                    div {
-                                        style: "font-size: 11px; color: rgba(148, 163, 184, 0.82);",
+                                    div { style: "font-size: 11px; color: rgba(148, 163, 184, 0.82);",
                                         match child.node_type {
                                             OrgNodeType::Company => "公司",
                                             OrgNodeType::Department => "部门",
@@ -479,8 +590,7 @@ fn SelectedNodePanel(
                                         }
                                     }
                                 }
-                                div {
-                                    style: "font-size: 12px; color: rgba(94, 234, 212, 0.92);",
+                                div { style: "font-size: 12px; color: rgba(94, 234, 212, 0.92);",
                                     "{child.member_count} 人"
                                 }
                             }
@@ -489,8 +599,7 @@ fn SelectedNodePanel(
                 }
             }
 
-            div {
-                style: "display: flex; flex-wrap: wrap; gap: 10px;",
+            div { style: "display: flex; flex-wrap: wrap; gap: 10px;",
                 button {
                     disabled: !can_expand,
                     onclick: move |_| {
@@ -519,12 +628,20 @@ fn SelectedNodePanel(
                 }
             }
 
-            div {
-                style: "font-size: 12px; line-height: 1.6; color: rgba(148, 163, 184, 0.82);",
+            div { style: "font-size: 12px; line-height: 1.6; color: rgba(148, 163, 184, 0.82);",
                 match mode {
-                    AtlasViewMode::Topology => "建议从顶层部门逐步展开，先看拓扑，再切到热力视图确认增长异动。".to_string(),
-                    AtlasViewMode::Heatmap => "热力视图适合找增员过快或收缩明显的组织，再结合人员流做详细排查。".to_string(),
-                    AtlasViewMode::Timeline => "时间轴会回放人数快照，适合和组织变更审批记录一起核对。".to_string(),
+                    AtlasViewMode::Topology => {
+                        "建议从顶层部门逐步展开，先看拓扑，再切到热力视图确认增长异动。"
+                            .to_string()
+                    }
+                    AtlasViewMode::Heatmap => {
+                        "热力视图适合找增员过快或收缩明显的组织，再结合人员流做详细排查。"
+                            .to_string()
+                    }
+                    AtlasViewMode::Timeline => {
+                        "时间轴会回放人数快照，适合和组织变更审批记录一起核对。"
+                            .to_string()
+                    }
                 }
             }
         }
@@ -538,15 +655,155 @@ fn MetricCard(
     accent: String,
 ) -> Element {
     rsx! {
-        div {
-            style: "display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.12);",
-            div {
-                style: "font-size: 11px; color: rgba(148, 163, 184, 0.82);",
-                "{label}"
-            }
-            div {
-                style: format!("font-size: 16px; font-weight: 600; color: {accent};"),
+        div { style: "display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.12);",
+            div { style: "font-size: 11px; color: rgba(148, 163, 184, 0.82);", "{label}" }
+            div { style: format!("font-size: 16px; font-weight: 600; color: {accent};"),
                 "{value}"
+            }
+        }
+    }
+}
+
+/// 变更预览浮层
+#[component]
+fn ChangePreviewOverlay(
+    preview: DragChangePreview,
+    on_confirm: EventHandler<()>,
+    on_cancel: EventHandler<()>,
+) -> Element {
+    rsx! {
+        div { style: "
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(2, 6, 23, 0.68);
+                backdrop-filter: blur(8px);
+                z-index: 50;
+                border-radius: var(--ds-radius-lg);
+            ",
+
+            div { style: "
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                    padding: 28px;
+                    max-width: 420px;
+                    width: 90%;
+                    border-radius: 20px;
+                    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(10, 14, 26, 0.98));
+                    border: 1px solid rgba(148, 163, 184, 0.18);
+                    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+                ",
+
+                // 标题
+                div { style: "display: flex; flex-direction: column; gap: 6px;",
+                    div { style: "font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(148, 163, 184, 0.72);",
+                        "组织结构调整"
+                    }
+                    div { style: "font-size: 18px; font-weight: 600; color: #f8fafc;",
+                        "部门归属变更预览"
+                    }
+                }
+
+                // 变更详情
+                div { style: "display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 14px; background: rgba(15, 23, 42, 0.52); border: 1px solid rgba(148, 163, 184, 0.12);",
+                    // 被移动的部门
+                    div { style: "display: flex; align-items: center; gap: 10px;",
+                        div { style: "width: 10px; height: 10px; border-radius: 999px; background: var(--ds-accent);" }
+                        div { style: "display: flex; flex-direction: column; gap: 2px;",
+                            div { style: "font-size: 11px; color: rgba(148, 163, 184, 0.72);",
+                                "移动部门"
+                            }
+                            div { style: "font-size: 15px; font-weight: 600; color: #f8fafc;",
+                                "{preview.node_name}"
+                            }
+                            div { style: "font-size: 12px; color: rgba(148, 163, 184, 0.82);",
+                                "{preview.member_count} 人"
+                            }
+                        }
+                    }
+
+                    // 箭头指示
+                    div { style: "display: flex; align-items: center; gap: 8px; padding: 0 20px;",
+                        div { style: "font-size: 12px; color: rgba(148, 163, 184, 0.6);",
+                            "从"
+                        }
+                        div { style: "font-size: 13px; font-weight: 500; color: rgba(251, 191, 36, 0.9);",
+                            "{preview.old_parent_name}"
+                        }
+                        div { style: "font-size: 14px; color: var(--ds-accent);", "→" }
+                        div { style: "font-size: 12px; color: rgba(148, 163, 184, 0.6);",
+                            "到"
+                        }
+                        div { style: "font-size: 13px; font-weight: 500; color: rgba(52, 211, 153, 0.95);",
+                            "{preview.new_parent_name}"
+                        }
+                    }
+
+                    // 影响分析
+                    div { style: "display: flex; gap: 12px; padding-top: 4px;",
+                        div { style: "display: flex; flex-direction: column; gap: 2px; flex: 1;",
+                            div { style: "font-size: 10px; color: rgba(148, 163, 184, 0.6);",
+                                "原部门剩余子级"
+                            }
+                            div { style: "font-size: 14px; font-weight: 600; color: #e2e8f0;",
+                                "{preview.old_parent_remaining_children}"
+                            }
+                        }
+                        div { style: "display: flex; flex-direction: column; gap: 2px; flex: 1;",
+                            div { style: "font-size: 10px; color: rgba(148, 163, 184, 0.6);",
+                                "新部门已有子级"
+                            }
+                            div { style: "font-size: 14px; font-weight: 600; color: #e2e8f0;",
+                                "{preview.new_parent_existing_children}"
+                            }
+                        }
+                    }
+                }
+
+                // 警告提示
+                div { style: "display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.18);",
+                    div { style: "font-size: 13px; color: rgba(251, 191, 36, 0.88);",
+                        "⚠️ 此操作将改变 {preview.node_name} 的上级归属，所有下级结构将一并迁移。"
+                    }
+                }
+
+                // 操作按钮
+                div { style: "display: flex; gap: 12px;",
+                    button {
+                        onclick: move |_| on_cancel.call(()),
+                        style: "
+                            flex: 1;
+                            padding: 10px 16px;
+                            border-radius: 12px;
+                            border: 1px solid rgba(148, 163, 184, 0.18);
+                            background: rgba(15, 23, 42, 0.42);
+                            color: #e2e8f0;
+                            font-size: 14px;
+                            cursor: pointer;
+                            transition: all 0.15s;
+                        ",
+                        "取消"
+                    }
+                    button {
+                        onclick: move |_| on_confirm.call(()),
+                        style: "
+                            flex: 1;
+                            padding: 10px 16px;
+                            border-radius: 12px;
+                            border: 1px solid rgba(16, 185, 129, 0.36);
+                            background: rgba(16, 185, 129, 0.18);
+                            color: #d1fae5;
+                            font-size: 14px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: all 0.15s;
+                        ",
+                        "确认执行"
+                    }
+                }
             }
         }
     }

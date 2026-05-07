@@ -11,13 +11,37 @@ pub use detail_panel::DetailPanelProvider;
 pub use grid::PeopleGrid;
 
 use crate::components::page_header::PageHeader;
+use crate::services::client::ApiClient;
+use crate::services::employee::{EmployeeResponse, ListEmployeesQuery};
 use dioxus::prelude::*;
 
 /// PeopleView 人员流视图
 #[component]
 pub fn PeopleView() -> Element {
-    // 模拟员工数据
-    let employees = get_mock_employees();
+    let api_client = use_context::<ApiClient>();
+
+    let employees_resource = use_resource(move || {
+        let client = api_client.clone();
+        async move {
+            let query = ListEmployeesQuery {
+                org_id: Some(1),
+                department_id: None,
+                include_children: None,
+                position_id: None,
+                status: None,
+                keyword: None,
+                page_size: Some(100),
+                cursor: None,
+            };
+            match client.list_employees(&query).await {
+                Ok(list) => list.into_iter().map(Employee::from_api).collect(),
+                Err(_) => get_mock_employees(),
+            }
+        }
+    });
+
+    let employees = employees_resource()
+        .unwrap_or_else(get_mock_employees);
 
     rsx! {
         DetailPanelProvider {
@@ -25,7 +49,7 @@ pub fn PeopleView() -> Element {
                 title: "人员管理".to_string(),
                 description: Some("浏览员工、查看详情、管理部门分配".to_string()),
             }
-            PeopleGrid { employees: employees }
+            PeopleGrid { employees }
         }
     }
 }

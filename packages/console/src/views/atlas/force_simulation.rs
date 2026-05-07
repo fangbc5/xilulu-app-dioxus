@@ -3,6 +3,7 @@
 //! 实现 D3-style 的力导向布局算法。
 
 use super::org_node::{ForceLink, ForceNode};
+use super::SortMode;
 use std::collections::BTreeMap;
 
 /// 力导向模拟器
@@ -270,6 +271,7 @@ impl ForceSimulation {
 /// 从组织树构建力导向图数据
 pub fn build_force_data_from_tree(
     tree: &super::org_node::OrgNode,
+    sort_mode: SortMode,
 ) -> (Vec<ForceNode>, Vec<ForceLink>) {
     let mut nodes = Vec::new();
     let mut links = Vec::new();
@@ -279,6 +281,7 @@ pub fn build_force_data_from_tree(
         nodes: &mut Vec<ForceNode>,
         links: &mut Vec<ForceLink>,
         depth: usize,
+        sort_mode: SortMode,
     ) {
         // 添加节点
         nodes.push(ForceNode::from_org(node, depth));
@@ -287,18 +290,35 @@ pub fn build_force_data_from_tree(
             return;
         }
 
+        // 排序子节点以控制展示顺序
+        let mut sorted_children: Vec<&super::org_node::OrgNode> = node.children.iter().collect();
+        match sort_mode {
+            SortMode::Default => {}
+            SortMode::Name => sorted_children.sort_by(|a, b| a.name.cmp(&b.name)),
+            SortMode::Headcount => {
+                sorted_children.sort_by(|a, b| b.member_count.cmp(&a.member_count))
+            }
+            SortMode::Growth => {
+                sorted_children.sort_by(|a, b| {
+                    b.growth_rate
+                        .partial_cmp(&a.growth_rate)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+            }
+        }
+
         // 添加边和递归子节点
-        for child in &node.children {
+        for child in sorted_children {
             links.push(ForceLink {
                 source: node.id,
                 target: child.id,
                 distance: 180.0 + depth as f32 * 28.0 + child.children.len() as f32 * 12.0,
                 weight: 0.8 + child.collaboration_index / 100.0,
             });
-            traverse(child, nodes, links, depth + 1);
+            traverse(child, nodes, links, depth + 1, sort_mode);
         }
     }
 
-    traverse(tree, &mut nodes, &mut links, 0);
+    traverse(tree, &mut nodes, &mut links, 0, sort_mode);
     (nodes, links)
 }

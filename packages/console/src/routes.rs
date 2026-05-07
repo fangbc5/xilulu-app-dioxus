@@ -6,14 +6,23 @@
 use dioxus::prelude::*;
 use crate::layout::ConsoleLayout;
 use crate::views::atlas::AtlasView;
+use crate::views::auth::{LoginPage, SelectTenantPage};
 use crate::views::cockpit::CockpitView;
+use crate::views::errors::NotFoundPage;
 use crate::views::people::PeopleView;
 use crate::modules::team::views::*;
 
 /// 控制台路由定义
 #[derive(Routable, Clone, PartialEq, Debug)]
 pub enum Route {
-    // 所有页面共享 ConsoleLayout（顶栏 + 侧栏 + 内容区）
+    // === 认证路由（无 Layout） ===
+    #[route("/login")]
+    LoginPage {},
+
+    #[route("/select-tenant")]
+    SelectTenantPage {},
+
+    // 所有业务页面共享 ConsoleLayout（顶栏 + 侧栏 + 内容区）
     #[layout(ConsoleLayout)]
 
         // === 框架级路由 ===
@@ -41,4 +50,8 @@ pub enum Route {
 
         #[route("/team/contacts")]
         TeamContacts {},
+
+    // === 404 兜底 ===
+    #[route("/:..route")]
+    NotFoundPage { route: Vec<String> },
 }

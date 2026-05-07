@@ -36,34 +36,22 @@ impl ConsoleModule for TeamModule {
                 badge: None,
             },
             NavItem {
-                label: "人员管理".to_string(),
-                path: "/people".to_string(),
-                icon: "👥".to_string(),
-                badge: Some(3),
-            },
-            NavItem {
-                label: "组织地图".to_string(),
+                label: "组织".to_string(),
                 path: "/atlas".to_string(),
                 icon: "🗺️".to_string(),
                 badge: None,
             },
             NavItem {
-                label: "组织".to_string(),
-                path: "/team/orgs".to_string(),
-                icon: "🏢".to_string(),
-                badge: None,
+                label: "员工".to_string(),
+                path: "/people".to_string(),
+                icon: "👥".to_string(),
+                badge: Some(3),
             },
             NavItem {
                 label: "部门".to_string(),
                 path: "/team/depts".to_string(),
                 icon: "📂".to_string(),
                 badge: None,
-            },
-            NavItem {
-                label: "员工".to_string(),
-                path: "/team/employees".to_string(),
-                icon: "👤".to_string(),
-                badge: Some(3), // 假数据：3 位待分配员工
             },
             NavItem {
                 label: "岗位".to_string(),

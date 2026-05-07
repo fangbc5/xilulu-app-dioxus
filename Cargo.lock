@@ -548,9 +548,13 @@ dependencies = [
  "dioxus",
  "dioxus-free-icons",
  "gloo-net 0.5.0",
+ "gloo-timers",
+ "js-sys",
+ "log",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "web-sys",
 ]
 
 [[package]]

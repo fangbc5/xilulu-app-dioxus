@@ -3,8 +3,8 @@
 //! 基于 SVG 的交互式组织架构可视化。
 
 use super::force_simulation::{build_force_data_from_tree, ForceSimulation};
-use super::org_node::{ForceLink, ForceNode, OrgNode, OrgNodeType, HISTORY_MONTHS};
-use super::AtlasViewMode;
+use super::org_node::{DragChangePreview, ForceLink, ForceNode, OrgNode, OrgNodeType, HISTORY_MONTHS};
+use super::{AtlasViewMode, SortMode};
 use dioxus::html::InteractionElementOffset;
 use dioxus::prelude::*;
 use std::collections::HashMap;
@@ -22,6 +22,24 @@ struct PanGesture {
     last_y: f32,
 }
 
+/// 节点拖拽状态
+#[derive(Clone, Debug, Default, PartialEq)]
+struct NodeDragState {
+    /// 正在拖拽的节点 ID
+    node_id: Option<u64>,
+    /// 拖拽起始时节点的原始位置
+    origin_x: f32,
+    origin_y: f32,
+    /// 当前拖拽偏移（SVG transform 空间）
+    delta_x: f32,
+    delta_y: f32,
+    /// 拖拽中鼠标上一帧位置（SVG element coordinates）
+    last_mouse_x: f32,
+    last_mouse_y: f32,
+    /// 命中的放置目标
+    drop_target: Option<u64>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 struct LayoutSnapshot {
     nodes: Vec<ForceNode>,
@@ -36,17 +54,20 @@ pub fn OrgCanvas(
     height: f32,
     mode: AtlasViewMode,
     timeline_index: usize,
+    sort_mode: SortMode,
     selected_node_id: Option<u64>,
     on_node_click: Callback<u64>,
     on_node_toggle: Callback<u64>,
+    on_drag_complete: Callback<DragChangePreview>,
 ) -> Element {
-    let layout = use_memo(use_reactive((&tree, &width, &height), |(tree, width, height)| {
-        build_layout_snapshot(&tree, width, height)
+    let layout = use_memo(use_reactive((&tree, &width, &height, &sort_mode), |(tree, width, height, sort_mode)| {
+        build_layout_snapshot(&tree, width, height, sort_mode)
     }));
 
     let mut zoom = use_signal(|| 1.0_f32);
     let mut offset = use_signal(CanvasOffset::default);
     let mut pan_gesture = use_signal(PanGesture::default);
+    let mut node_drag = use_signal(NodeDragState::default);
 
     let layout = layout();
     let nodes = layout.nodes.clone();
@@ -54,7 +75,15 @@ pub fn OrgCanvas(
     let node_positions: HashMap<u64, (f32, f32)> =
         nodes.iter().map(|node| (node.id, (node.x, node.y))).collect();
 
-    let canvas_cursor = if pan_gesture().dragging {
+    // Build a radius lookup for hit detection
+    let node_radii: HashMap<u64, f32> = nodes.iter()
+        .map(|n| (n.id, n.radius_at(timeline_index) + 12.0)) // +12 for easier drop targeting
+        .collect();
+
+    let drag = node_drag();
+    let canvas_cursor = if drag.node_id.is_some() {
+        "grabbing"
+    } else if pan_gesture().dragging {
         "grabbing"
     } else {
         "grab"
@@ -92,29 +121,83 @@ pub fn OrgCanvas(
                 zoom.set((zoom() * factor as f32).clamp(0.55, 2.2));
             },
             onmousemove: move |event| {
+                let coordinates = event.element_coordinates();
+                let mx = coordinates.x as f32;
+                let my = coordinates.y as f32;
+
+                // Handle node drag
+                let drag_state = node_drag();
+                if let Some(_drag_id) = drag_state.node_id {
+                    let z = zoom();
+                    let o = offset();
+                    // Convert element coordinates to graph coordinates
+                    let graph_x = (mx - o.x) / z;
+                    let graph_y = (my - o.y) / z;
+                    let new_delta_x = graph_x - drag_state.origin_x;
+                    let new_delta_y = graph_y - drag_state.origin_y;
+
+                    // Hit detection: find closest node to current cursor position
+                    let mut hit_target: Option<u64> = None;
+                    for (id, (nx, ny)) in &node_positions {
+                        if *id == _drag_id {
+                            continue;
+                        }
+                        let r = node_radii.get(id).copied().unwrap_or(30.0);
+                        let dx = graph_x - nx;
+                        let dy = graph_y - ny;
+                        if (dx * dx + dy * dy) < r * r {
+                            hit_target = Some(*id);
+                            break;
+                        }
+                    }
+                    node_drag
+                        .set(NodeDragState {
+                            node_id: drag_state.node_id,
+                            origin_x: drag_state.origin_x,
+                            origin_y: drag_state.origin_y,
+                            delta_x: new_delta_x,
+                            delta_y: new_delta_y,
+                            last_mouse_x: mx,
+                            last_mouse_y: my,
+                            drop_target: hit_target,
+                        });
+                    return;
+                }
                 let gesture = pan_gesture();
                 if !gesture.dragging {
                     return;
                 }
-
-                let coordinates = event.element_coordinates();
-                let next_x = coordinates.x as f32;
-                let next_y = coordinates.y as f32;
-
                 offset
                     .with_mut(|offset| {
-                        offset.x += next_x - gesture.last_x;
-                        offset.y += next_y - gesture.last_y;
+                        offset.x += mx - gesture.last_x;
+                        offset.y += my - gesture.last_y;
                     });
                 pan_gesture
                     .set(PanGesture {
                         dragging: true,
-                        last_x: next_x,
-                        last_y: next_y,
+                        last_x: mx,
+                        last_y: my,
                     });
             },
-            onmouseup: move |_| pan_gesture.set(PanGesture::default()),
-            onmouseleave: move |_| pan_gesture.set(PanGesture::default()),
+            onmouseup: move |_| {
+                // Check if we were dragging a node
+                let drag_state = node_drag();
+                if let Some(drag_id) = drag_state.node_id {
+                    if let Some(target_id) = drag_state.drop_target {
+                        // Generate preview via tree
+                        let preview = tree.preview_move(drag_id, target_id);
+                        if let Some(p) = preview {
+                            on_drag_complete.call(p);
+                        }
+                    }
+                    node_drag.set(NodeDragState::default());
+                }
+                pan_gesture.set(PanGesture::default());
+            },
+            onmouseleave: move |_| {
+                node_drag.set(NodeDragState::default());
+                pan_gesture.set(PanGesture::default());
+            },
 
             svg {
                 width: "100%",
@@ -174,21 +257,51 @@ pub fn OrgCanvas(
                     }
 
                     for node in nodes.iter() {
-                        NodeCircle {
-                            node: node.clone(),
-                            mode,
-                            timeline_index,
-                            selected: selected_node_id == Some(node.id),
-                            onclick: {
-                                let callback = on_node_click.clone();
-                                let node_id = node.id;
-                                move || callback.call(node_id)
-                            },
-                            ontoggle: {
-                                let callback = on_node_toggle.clone();
-                                let node_id = node.id;
-                                move || callback.call(node_id)
-                            },
+                        {
+                            let is_dragging = drag.node_id == Some(node.id);
+                            let is_drop_target = drag.drop_target == Some(node.id);
+                            let drag_delta = if is_dragging {
+                                (drag.delta_x, drag.delta_y)
+                            } else {
+                                (0.0, 0.0)
+                            };
+                            let nid = node.id;
+                            let node_x = node.x;
+                            let node_y = node.y;
+
+                            rsx! {
+                                NodeCircle {
+                                    node: node.clone(),
+                                    mode,
+                                    timeline_index,
+                                    selected: selected_node_id == Some(node.id),
+                                    is_dragging,
+                                    is_drop_target,
+                                    drag_delta,
+                                    onclick: {
+                                        let callback = on_node_click.clone();
+                                        move || callback.call(nid)
+                                    },
+                                    ontoggle: {
+                                        let callback = on_node_toggle.clone();
+                                        move || callback.call(nid)
+                                    },
+                                    on_drag_start: move || {
+                                        node_drag
+                                            .set(NodeDragState {
+                                                node_id: Some(nid),
+                                                origin_x: node_x,
+                                                origin_y: node_y,
+                                                delta_x: 0.0,
+                                                delta_y: 0.0,
+                                                last_mouse_x: 0.0,
+                                                last_mouse_y: 0.0,
+                                                drop_target: None,
+                                            });
+                                        pan_gesture.set(PanGesture::default());
+                                    },
+                                }
+                            }
                         }
                     }
                 }
@@ -242,8 +355,12 @@ fn NodeCircle(
     mode: AtlasViewMode,
     timeline_index: usize,
     selected: bool,
+    is_dragging: bool,
+    is_drop_target: bool,
+    drag_delta: (f32, f32),
     onclick: EventHandler<()>,
     ontoggle: EventHandler<()>,
+    on_drag_start: EventHandler<()>,
 ) -> Element {
     let radius = node.radius_at(timeline_index);
     let member_count = node.headcount_at(timeline_index);
@@ -265,21 +382,48 @@ fn NodeCircle(
     let subtitle = node_subtitle(&node, mode, timeline_index, member_count);
     let collapse_marker = if node.expanded { "-" } else { "+" };
 
+    // Drag visual: translate the dragged node, show drop target glow
+    let transform = if is_dragging {
+        format!("translate({:.1} {:.1})", drag_delta.0, drag_delta.1)
+    } else {
+        String::new()
+    };
+    let drag_opacity = if is_dragging { "0.85" } else { "1.0" };
+
+    // Drop target: pulsing green ring
+    let drop_target_stroke = if is_drop_target {
+        "rgba(52, 211, 153, 0.95)"
+    } else {
+        stroke.as_ref()
+    };
+    let drop_target_stroke_width = if is_drop_target { 4.0 } else { stroke_width };
+    let drop_target_halo_radius = if is_drop_target {
+        radius + 16.0
+    } else {
+        glow_radius
+    };
+
     rsx! {
         g {
             style: "cursor: pointer;",
-            onmousedown: move |event| event.stop_propagation(),
+            transform: "{transform}",
+            opacity: "{drag_opacity}",
+            onmousedown: move |event| {
+                event.stop_propagation();
+                on_drag_start.call(());
+            },
             onclick: move |_| onclick.call(()),
             ondoubleclick: move |_| ontoggle.call(()),
 
+            // Outer halo / drop target ring
             circle {
                 cx: "{node.x}",
                 cy: "{node.y}",
-                r: "{glow_radius}",
-                fill: "none",
-                stroke: selected_halo(mode, node.growth_rate),
-                stroke_width: "2",
-                opacity: "{halo_opacity}",
+                r: "{drop_target_halo_radius}",
+                fill: if is_drop_target { "rgba(52, 211, 153, 0.12)" } else { "none" },
+                stroke: if is_drop_target { "rgba(52, 211, 153, 0.95)" } else { selected_halo(mode, node.growth_rate) },
+                stroke_width: if is_drop_target { "3" } else { "2" },
+                opacity: if is_drop_target { "0.9" } else { "{halo_opacity}" },
             }
 
             circle {
@@ -287,8 +431,8 @@ fn NodeCircle(
                 cy: "{node.y}",
                 r: "{radius}",
                 fill: "{fill}",
-                stroke: "{stroke}",
-                stroke_width: "{stroke_width}",
+                stroke: "{drop_target_stroke}",
+                stroke_width: "{drop_target_stroke_width}",
                 filter: "url(#node-shadow)",
             }
 
@@ -405,8 +549,8 @@ fn ModeLegend(
     }
 }
 
-fn build_layout_snapshot(tree: &OrgNode, width: f32, height: f32) -> LayoutSnapshot {
-    let (nodes, links) = build_force_data_from_tree(tree);
+fn build_layout_snapshot(tree: &OrgNode, width: f32, height: f32, sort_mode: SortMode) -> LayoutSnapshot {
+    let (nodes, links) = build_force_data_from_tree(tree, sort_mode);
     let mut simulation = ForceSimulation::new(width, height);
     simulation.set_nodes(nodes);
     simulation.set_links(links);

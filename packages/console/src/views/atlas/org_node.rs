@@ -2,6 +2,7 @@
 //!
 //! 组织树形结构的数据定义。
 
+use crate::services::department::DepartmentTreeNode;
 use serde::{Deserialize, Serialize};
 
 pub const HISTORY_MONTHS: [&str; 6] = [
@@ -196,6 +197,49 @@ impl OrgNode {
         base + (member_count as f32 * 0.25).min(18.0)
     }
 
+    /// 从 API 部门树节点构建 OrgNode 树
+    pub fn from_api_tree(nodes: Vec<DepartmentTreeNode>, parent_id: Option<u64>) -> Vec<OrgNode> {
+        nodes
+            .into_iter()
+            .map(|node| {
+                let member_count = node.employee_count.unwrap_or(0) as u32;
+                let has_children = node.children
+                    .as_ref()
+                    .map(|c| !c.is_empty())
+                    .unwrap_or(false);
+
+                let children = node.children
+                    .unwrap_or_default();
+                let child_nodes = Self::from_api_tree(children, Some(node.id as u64));
+
+                let node_type = if parent_id.is_none() && has_children {
+                    OrgNodeType::Company
+                } else if has_children {
+                    OrgNodeType::Department
+                } else {
+                    OrgNodeType::Group
+                };
+
+                let expanded = has_children;
+
+                let mut org_node = OrgNode {
+                    id: node.id as u64,
+                    name: node.name,
+                    node_type,
+                    parent_id,
+                    children: child_nodes,
+                    member_count,
+                    expanded,
+                    history: vec![member_count],
+                    growth_rate: 0.0,
+                    collaboration_index: 50.0,
+                };
+                org_node.refresh_rollup_metrics();
+                org_node
+            })
+            .collect()
+    }
+
 }
 
 /// 力导向图节点（运行时状态）
@@ -267,6 +311,131 @@ pub struct ForceLink {
     pub target: u64,
     pub distance: f32,
     pub weight: f32,
+}
+
+/// 拖拽变更预览数据
+#[derive(Clone, Debug, PartialEq)]
+pub struct DragChangePreview {
+    /// 被拖拽的节点 ID
+    pub node_id: u64,
+    /// 被拖拽的节点名称
+    pub node_name: String,
+    /// 原父节点 ID
+    pub old_parent_id: u64,
+    /// 原父节点名称
+    pub old_parent_name: String,
+    /// 新父节点 ID
+    pub new_parent_id: u64,
+    /// 新父节点名称
+    pub new_parent_name: String,
+    /// 被拖拽节点的人数
+    pub member_count: u32,
+    /// 原父节点下剩余子节点数
+    pub old_parent_remaining_children: usize,
+    /// 新父节点原有子节点数
+    pub new_parent_existing_children: usize,
+}
+
+impl OrgNode {
+    /// 将指定节点从当前父节点移动到新父节点
+    ///
+    /// 返回 true 表示移动成功，false 表示无法移动（如目标是自身后代）
+    pub fn move_to_parent(&mut self, node_id: u64, new_parent_id: u64) -> bool {
+        // 不能移到自己下面
+        if node_id == new_parent_id {
+            return false;
+        }
+
+        // 检查目标节点是否是被拖拽节点的后代
+        if let Some(dragged) = self.find(node_id) {
+            if dragged.find(new_parent_id).is_some() {
+                return false; // 不能移到自己的后代下面
+            }
+        }
+
+        // 从原父节点中移除
+        let removed = self.remove_child(node_id);
+        let Some(mut removed_node) = removed else {
+            return false;
+        };
+
+        // 更新 parent_id
+        removed_node.parent_id = Some(new_parent_id);
+
+        // 添加到新父节点
+        if self.add_child_to(new_parent_id, removed_node) {
+            // 重新计算汇总指标
+            self.refresh_rollup_metrics();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// 生成拖拽变更预览数据
+    pub fn preview_move(&self, node_id: u64, new_parent_id: u64) -> Option<DragChangePreview> {
+        if node_id == new_parent_id {
+            return None;
+        }
+
+        let dragged = self.find(node_id)?;
+        
+        // 检查目标是否是后代
+        if dragged.find(new_parent_id).is_some() {
+            return None;
+        }
+
+        let old_parent_id = dragged.parent_id?;
+        let old_parent = self.find(old_parent_id)?;
+        let new_parent = self.find(new_parent_id)?;
+
+        Some(DragChangePreview {
+            node_id,
+            node_name: dragged.name.clone(),
+            old_parent_id,
+            old_parent_name: old_parent.name.clone(),
+            new_parent_id,
+            new_parent_name: new_parent.name.clone(),
+            member_count: dragged.member_count,
+            old_parent_remaining_children: old_parent.children.len().saturating_sub(1),
+            new_parent_existing_children: new_parent.children.len(),
+        })
+    }
+
+    /// 从子节点中移除指定 ID 的节点（深度优先搜索）
+    fn remove_child(&mut self, node_id: u64) -> Option<OrgNode> {
+        for i in 0..self.children.len() {
+            if self.children[i].id == node_id {
+                return Some(self.children.remove(i));
+            }
+        }
+
+        for child in &mut self.children {
+            if let Some(removed) = child.remove_child(node_id) {
+                return Some(removed);
+            }
+        }
+
+        None
+    }
+
+    /// 向指定 ID 的节点添加子节点
+    fn add_child_to(&mut self, parent_id: u64, child: OrgNode) -> bool {
+        if self.id == parent_id {
+            self.children.push(child);
+            return true;
+        }
+
+        // 先找到目标所在的子树，再传递所有权
+        for c in &mut self.children {
+            if c.find(parent_id).is_some() {
+                return c.add_child_to(parent_id, child);
+            }
+        }
+
+        false
+    }
+
 }
 
 fn growth_rate_from_history(history: &[u32]) -> f32 {

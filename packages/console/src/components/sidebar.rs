@@ -6,56 +6,66 @@ use dioxus::prelude::*;
 /// 侧边栏
 ///
 /// 根据当前活动模块动态显示导航项。
-/// 使用 navigator.push() 进行客户端路由切换（而非 <a> 标签），避免页面刷新。
+/// 支持展开/收起模式，按钮仿照 ChatGPT 风格。
 #[component]
 pub fn Sidebar(
     /// 当前模块名称
     module_name: String,
     /// 导航项列表
     items: Vec<NavItem>,
+    /// 是否收起
+    collapsed: bool,
+    /// 收起/展开回调
+    on_toggle: EventHandler<()>,
 ) -> Element {
     let nav = use_navigator();
     let current_path = use_route::<crate::routes::Route>();
 
+    let sidebar_class = if collapsed {
+        "sidebar sidebar-collapsed"
+    } else {
+        "sidebar"
+    };
+
+    let arrow_rotation = if collapsed { 0 } else { 180 };
+    let toggle_title = if collapsed { "展开侧栏" } else { "收起侧栏" };
+
     rsx! {
-        aside {
-            class: "sidebar",
-            // 模块标题
-            div {
-                style: "padding: 20px 16px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ds-text-tertiary);",
-                "{module_name}"
-            }
-            // 导航项
-            nav {
-                style: "flex: 1; display: flex; flex-direction: column;",
-                for item in items.iter() {
-                    {
-                        let path = item.path.clone();
-                        let label = item.label.clone();
-                        let icon_char = item.icon.clone();
-                        let badge = item.badge;
-                        // 判断当前路由是否匹配这个导航项
-                        let is_active = format!("{}", current_path).starts_with(&path);
-                        let active_class = if is_active { " active" } else { "" };
-                        rsx! {
-                            div {
-                                class: "sidebar-item{active_class}",
-                                onclick: {
-                                    let path = path.clone();
-                                    move |_| {
-                                        let _ = nav.push(path.as_str());
-                                    }
-                                },
-                                // 图标
-                                span {
-                                    style: "width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 14px;",
-                                    "{icon_char}"
-                                }
-                                span { "{label}" }
-                                if let Some(b) = badge {
-                                    span {
-                                        style: "margin-left: auto; background: var(--ds-accent); color: var(--ds-text-inverse); font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 500;",
-                                        "{b}"
+        // sidebar-area 作为相对定位容器，按钮用 absolute 浮在外面
+        div { class: "sidebar-area",
+            aside { class: "{sidebar_class}",
+                // 模块标题
+                div { class: "sidebar-title", "{module_name}" }
+
+                // 导航项
+                nav { class: "sidebar-nav",
+                    for item in items.iter() {
+                        {
+                            let path = item.path.clone();
+                            let label = item.label.clone();
+                            let icon_char = item.icon.clone();
+                            let badge = item.badge;
+                            let current_str = format!("{}", current_path);
+                            let is_active = if path == "/" {
+                                current_str == "/"
+                            } else {
+                                current_str.starts_with(&path)
+                            };
+                            let active_class = if is_active { " active" } else { "" };
+                            rsx! {
+                                div {
+                                    class: "sidebar-item{active_class}",
+                                    title: "{label}",
+                                    onclick: {
+                                        let path = path.clone();
+                                        move |_| {
+                                            let _ = nav.push(path.as_str());
+                                        }
+                                    },
+                                    span { class: "sidebar-item-icon", "{icon_char}" }
+                                    span { class: "sidebar-item-label", "{label}" }
+                                    if let Some(b) = badge {
+                                        span { class: "sidebar-item-badge", "{b}" }
                                     }
                                 }
                             }
@@ -63,13 +73,24 @@ pub fn Sidebar(
                     }
                 }
             }
-            // 底部 ⌘K 提示
-            div {
-                style: "padding: 16px;",
-                div {
-                    class: "cmd-hint",
-                    kbd { "⌘K" }
-                    span { "命令面板" }
+
+            // 收起/展开按钮 — 定位在 sidebar-area 内，不受 sidebar 宽度影响
+            button {
+                class: "sidebar-toggle-btn",
+                r#type: "button",
+                onclick: move |_| on_toggle.call(()),
+                title: "{toggle_title}",
+                svg {
+                    width: "16",
+                    height: "16",
+                    view_box: "0 0 16 16",
+                    fill: "none",
+                    stroke: "currentColor",
+                    stroke_width: "1.8",
+                    stroke_linecap: "round",
+                    stroke_linejoin: "round",
+                    style: "transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1); transform: rotate({arrow_rotation}deg);",
+                    polyline { points: "6,3 11,8 6,13" }
                 }
             }
         }

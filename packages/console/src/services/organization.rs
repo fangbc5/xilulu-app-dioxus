@@ -3,7 +3,6 @@
 //! 对接 ms-team /api/v1/team/organizations
 
 use serde::{Deserialize, Serialize};
-use serde::UrlQuery;
 
 use super::client::{ApiClient, ApiError};
 

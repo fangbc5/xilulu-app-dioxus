@@ -13,6 +13,9 @@ pub use timeline::{Activity, ActivityType, ActivityTimeline};
 
 use crate::components::stat_card::StatCard;
 use crate::registry::RegistryData;
+use crate::services::client::ApiClient;
+use crate::services::department::ListDepartmentsQuery;
+use crate::services::employee::ListEmployeesQuery;
 use dioxus::prelude::*;
 
 /// CockpitView 驾驶舱视图
@@ -21,9 +24,49 @@ pub fn CockpitView() -> Element {
     let registry = use_context::<RegistryData>();
     let cards = registry.cockpit_cards.clone();
 
-    // 模拟脉冲数据（实际应从 API 获取）
+    // 从 API 获取统计数据
+    let api_client = use_context::<ApiClient>();
+    let stats_resource = use_resource(move || {
+        let client = api_client.clone();
+        async move {
+            let emp_query = ListEmployeesQuery {
+                org_id: Some(1),
+                department_id: None,
+                include_children: None,
+                position_id: None,
+                status: None,
+                keyword: None,
+                page_size: Some(1000),
+                cursor: None,
+            };
+            let dept_query = ListDepartmentsQuery {
+                org_id: Some(1),
+                parent_id: None,
+                keyword: None,
+                status: None,
+                page_size: Some(1000),
+                cursor: None,
+            };
+
+            let emp_count = client.list_employees(&emp_query)
+                .await
+                .map(|l| l.len() as u32)
+                .unwrap_or(0);
+            let dept_count = client.list_departments(&dept_query)
+                .await
+                .map(|l| l.len() as u32)
+                .unwrap_or(0);
+
+            (emp_count, dept_count)
+        }
+    });
+
+    let (employee_count, _department_count) = stats_resource()
+        .map(|(e, d)| (e, d))
+        .unwrap_or((0, 0));
+
     let pulse_data = PulseData {
-        total_count: 368,
+        total_count: if employee_count > 0 { employee_count } else { 368 },
         trend: 12,
         trend_label: "本周".to_string(),
         vitality: 87,
