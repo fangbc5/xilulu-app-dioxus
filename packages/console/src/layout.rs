@@ -5,7 +5,7 @@
 use crate::components::command_palette::CommandPaletteProvider;
 use crate::components::sidebar::Sidebar;
 use crate::registry::RegistryData;
-use crate::services::auth::{AuthStage, RefreshTokenRequest, UserInfo};
+use crate::services::auth::{AuthStage, AuthTokens, RefreshTokenRequest, UserInfo};
 use crate::services::client::ApiClient;
 use crate::services::storage::{clear_auth, save_auth};
 use crate::theme::ThemeToggle;
@@ -16,8 +16,7 @@ use dioxus::prelude::*;
 pub fn ConsoleLayout() -> Element {
     // 认证守卫：未登录时跳转到 /login
     let mut stage = use_context::<Signal<AuthStage>>();
-    let mut access_token = use_context::<Signal<String>>();
-    let mut refresh_token_sig = use_context::<Signal<String>>();
+    let mut tokens = use_context::<Signal<AuthTokens>>();
     let user_info: Signal<Option<UserInfo>> = use_context();
     let api_client = use_context::<ApiClient>();
     let nav = use_navigator();
@@ -32,7 +31,7 @@ pub fn ConsoleLayout() -> Element {
         async move {
             loop {
                 gloo_timers::future::TimeoutFuture::new(240_000).await;
-                let rt = refresh_token_sig();
+                let rt = tokens().refresh_token;
                 if rt.is_empty() {
                     continue;
                 }
@@ -42,10 +41,13 @@ pub fn ConsoleLayout() -> Element {
                         if !resp.refresh_token.is_empty() {
                             api.set_refresh_token(&resp.refresh_token);
                         }
-                        access_token.set(resp.access_token.clone());
-                        refresh_token_sig.set(resp.refresh_token.clone());
+                        let new_tokens = AuthTokens {
+                            access_token: resp.access_token.clone(),
+                            refresh_token: resp.refresh_token.clone(),
+                        };
+                        tokens.set(new_tokens.clone());
                         if let Some(ui) = user_info() {
-                            save_auth(&access_token(), &refresh_token_sig(), &ui);
+                            save_auth(&new_tokens.access_token, &new_tokens.refresh_token, &ui);
                         }
                     }
                     Err(e) => {
@@ -53,8 +55,7 @@ pub fn ConsoleLayout() -> Element {
                         // refresh_token 也过期，强制登出
                         if matches!(stage(), AuthStage::Authenticated) {
                             stage.set(AuthStage::Unauthenticated);
-                            access_token.set(String::new());
-                            refresh_token_sig.set(String::new());
+                            tokens.set(AuthTokens::default());
                             clear_auth();
                         }
                     }
@@ -188,22 +189,22 @@ pub fn ConsoleLayout() -> Element {
 
                                         div {
                                             style: "
-                                                                                                                                                                                                                                                                                                                                                                                position: absolute; right: 0; top: 40px;
-                                                                                                                                                                                                                                                                                                                                                                                width: 160px; padding: 4px;
-                                                                                                                                                                                                                                                                                                                                                                                background: var(--ds-bg-secondary);
-                                                                                                                                                                                                                                                                                                                                                                                border: 1px solid var(--ds-border-primary);
-                                                                                                                                                                                                                                                                                                                                                                                border-radius: 8px;
-                                                                                                                                                                                                                                                                                                                                                                                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-                                                                                                                                                                                                                                                                                                                                                                                z-index: 9999;
-                                                                                                                                                                                                                                                                                                                                                                            ",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                position: absolute; right: 0; top: 40px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                width: 160px; padding: 4px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                background: var(--ds-bg-secondary);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                border: 1px solid var(--ds-border-primary);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                border-radius: 8px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                z-index: 9999;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            ",
 
                                             // 用户信息
                                             div {
                                                 style: "
-                                                                                                                                                                                                                                                                                                                                                                                padding: 8px 12px;
-                                                                                                                                                                                                                                                                                                                                                                                border-bottom: 1px solid var(--ds-border-primary);
-                                                                                                                                                                                                                                                                                                                                                                                margin-bottom: 4px;
-                                                                                                                                                                                                                                                                                                                                                                            ",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                padding: 8px 12px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                border-bottom: 1px solid var(--ds-border-primary);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                margin-bottom: 4px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            ",
                                                 div { style: "font-size: 13px; font-weight: 500; color: var(--ds-text-primary);",
                                                     "{nickname}"
                                                 }
@@ -212,13 +213,13 @@ pub fn ConsoleLayout() -> Element {
                                             // 注销按钮
                                             button {
                                                 style: "
-                                                                                                                                                                                                                                                                                                                                                                                    display: block; width: 100%;
-                                                                                                                                                                                                                                                                                                                                                                                    padding: 8px 12px; text-align: left;
-                                                                                                                                                                                                                                                                                                                                                                                    font-size: 13px; color: var(--ds-text-secondary);
-                                                                                                                                                                                                                                                                                                                                                                                    background: none; border: none;
-                                                                                                                                                                                                                                                                                                                                                                                    border-radius: 4px; cursor: pointer;
-                                                                                                                                                                                                                                                                                                                                                                                    transition: background 100ms ease;
-                                                                                                                                                                                                                                                                                                                                                                                ",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    display: block; width: 100%;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    padding: 8px 12px; text-align: left;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    font-size: 13px; color: var(--ds-text-secondary);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    background: none; border: none;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    border-radius: 4px; cursor: pointer;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    transition: background 100ms ease;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                ",
                                                 onclick: {
                                                     let api = api_client.clone();
                                                     move |_| {
@@ -227,8 +228,7 @@ pub fn ConsoleLayout() -> Element {
                                                             let _ = api.auth_logout().await;
                                                         });
                                                         stage.set(AuthStage::Unauthenticated);
-                                                        access_token.set(String::new());
-                                                        refresh_token_sig.set(String::new());
+                                                        tokens.set(AuthTokens::default());
                                                         clear_auth();
                                                         user_menu_open.set(false);
                                                         nav.push("/login");

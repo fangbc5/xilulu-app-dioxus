@@ -8,8 +8,8 @@ pub mod pending;
 pub mod timeline;
 
 pub use pulse::{PulseData, OrganizationPulse};
-pub use pending::{PendingItem, PendingType, PendingList};
-pub use timeline::{Activity, ActivityType, ActivityTimeline};
+pub use pending::{PendingItem, PendingList};
+pub use timeline::{Activity, ActivityTimeline};
 
 use crate::components::stat_card::StatCard;
 use crate::module::CockpitCard;
@@ -49,13 +49,15 @@ pub fn CockpitView() -> Element {
         async move {
             let emp_count = client.count_employees(1).await.unwrap_or(0);
             let dept_count = client.count_departments(1).await.unwrap_or(0);
-            (emp_count, dept_count)
+            let pos_count = client.count_positions(1).await.unwrap_or(0);
+            let recent_hires = client.count_recent_hires(1).await.unwrap_or(0);
+            (emp_count, dept_count, pos_count, recent_hires)
         }
     });
 
-    let (employee_count, department_count) = stats_resource()
-        .map(|(e, d)| (e, d))
-        .unwrap_or((0, 0));
+    let (employee_count, department_count, position_count, recent_hires) = stats_resource()
+        .map(|(e, d, p, h)| (e, d, p, h))
+        .unwrap_or((0, 0, 0, 0));
 
     // 用真实 API 数据覆盖模块注册卡片中的硬编码值
     let cards: Vec<CockpitCard> = registry.cockpit_cards.iter().map(|card| {
@@ -63,10 +65,18 @@ pub fn CockpitView() -> Element {
         match c.title.as_str() {
             "在职员工" => {
                 c.value = employee_count.to_string();
-                c.trend = if employee_count > 0 { None } else { c.trend.take() };
+                c.trend = None;
             }
             "部门数量" => {
                 c.value = department_count.to_string();
+                c.trend = None;
+            }
+            "岗位数量" => {
+                c.value = position_count.to_string();
+                c.trend = None;
+            }
+            "本月入职" => {
+                c.value = recent_hires.to_string();
                 c.trend = None;
             }
             _ => {}

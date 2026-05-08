@@ -21,7 +21,7 @@ use dioxus::prelude::*;
 use modules::team::TeamModule;
 use registry::build_registry;
 use routes::Route;
-use services::auth::{AuthStage, UserInfo};
+use services::auth::{AuthStage, AuthTokens, UserInfo};
 use services::client::ApiClient;
 use services::storage::restore_auth;
 use theme::{Theme, ThemeProvider};
@@ -46,23 +46,23 @@ fn App() -> Element {
     use_context_provider(|| registry_data);
 
     // 从 localStorage 恢复认证状态
-    let (init_stage, init_access, init_refresh, init_user_info) = use_hook(|| {
+    let (init_stage, init_tokens, init_user_info) = use_hook(|| {
         let (access, refresh, user) = restore_auth();
         if access.is_empty() || refresh.is_empty() {
-            (AuthStage::Unauthenticated, String::new(), String::new(), None::<UserInfo>)
+            (AuthStage::Unauthenticated, AuthTokens::default(), None::<UserInfo>)
         } else {
-            (AuthStage::Authenticated, access, refresh, user)
+            (AuthStage::Authenticated, AuthTokens { access_token: access, refresh_token: refresh }, user)
         }
     });
 
     // 全局 API 客户端（同时设置 access_token 和 refresh_token）
     let api_client = use_hook(|| {
         let client = ApiClient::new("http://localhost:8080");
-        if !init_access.is_empty() {
-            client.set_token(&init_access);
+        if !init_tokens.access_token.is_empty() {
+            client.set_token(&init_tokens.access_token);
         }
-        if !init_refresh.is_empty() {
-            client.set_refresh_token(&init_refresh);
+        if !init_tokens.refresh_token.is_empty() {
+            client.set_refresh_token(&init_tokens.refresh_token);
         }
         client
     });
@@ -70,8 +70,7 @@ fn App() -> Element {
 
     // 认证状态
     use_context_provider(|| Signal::new(init_stage));
-    use_context_provider(|| Signal::new(init_access));
-    use_context_provider(|| Signal::new(init_refresh));
+    use_context_provider(|| Signal::new(init_tokens));
     use_context_provider(|| Signal::new(init_user_info));
 
     rsx! {

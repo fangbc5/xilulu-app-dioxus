@@ -76,6 +76,9 @@ pub struct ListPositionsQuery {
 
 impl ApiClient {
     /// 获取岗位列表
+    ///
+    /// 服务端返回 `R<CursorPageBaseResp<PositionResponse>>`，
+    /// 即 `{ data: { cursor, has_next, list: [...], total } }`。
     pub async fn list_positions(
         &self,
         query: &ListPositionsQuery,
@@ -84,13 +87,36 @@ impl ApiClient {
         let path = format!("/api/v1/team/positions{}", query_str);
 
         #[derive(Debug, Deserialize)]
+        struct Page {
+            list: Vec<PositionResponse>,
+        }
+        #[derive(Debug, Deserialize)]
         struct Resp {
-            pub data: Option<Vec<PositionResponse>>,
-            pub list: Option<Vec<PositionResponse>>,
+            data: Option<Page>,
         }
 
         let resp: Resp = self.get(&path).await?;
-        Ok(resp.data.or(resp.list).unwrap_or_default())
+        Ok(resp.data.map(|p| p.list).unwrap_or_default())
+    }
+
+    /// 统计岗位数量（page_size=1，从分页响应的 total 字段获取总数）
+    pub async fn count_positions(&self, org_id: i64) -> Result<u32, ApiError> {
+        let path = format!(
+            "/api/v1/team/positions?org_id={}&page_size=1&cursor=1",
+            org_id
+        );
+
+        #[derive(Debug, Deserialize)]
+        struct Page {
+            total: Option<i64>,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Resp {
+            data: Option<Page>,
+        }
+
+        let resp: Resp = self.get(&path).await?;
+        Ok(resp.data.and_then(|d| d.total).unwrap_or(0) as u32)
     }
 
     /// 获取单个岗位详情
@@ -108,10 +134,7 @@ impl ApiClient {
     }
 
     /// 创建岗位
-    pub async fn create_position(
-        &self,
-        req: &CreatePositionRequest,
-    ) -> Result<i64, ApiError> {
+    pub async fn create_position(&self, req: &CreatePositionRequest) -> Result<i64, ApiError> {
         #[derive(Debug, Deserialize)]
         struct Resp {
             pub data: Option<i64>,
@@ -136,8 +159,7 @@ impl ApiClient {
 
     /// 删除岗位
     pub async fn delete_position(&self, id: i64) -> Result<(), ApiError> {
-        self.delete(&format!("/api/v1/team/positions/{}", id))
-            .await
+        self.delete(&format!("/api/v1/team/positions/{}", id)).await
     }
 }
 
@@ -146,7 +168,7 @@ fn build_position_query(query: &ListPositionsQuery) -> String {
     let mut parts = Vec::new();
 
     if let Some(v) = query.org_id {
-        parts.push(format!("orgId={}", v));
+        parts.push(format!("org_id={}", v));
     }
     if let Some(ref v) = query.category {
         if !v.is_empty() {
@@ -162,7 +184,7 @@ fn build_position_query(query: &ListPositionsQuery) -> String {
         parts.push(format!("status={}", v));
     }
     if let Some(v) = query.page_size {
-        parts.push(format!("pageSize={}", v));
+        parts.push(format!("page_size={}", v));
     }
     if let Some(v) = query.cursor {
         parts.push(format!("cursor={}", v));

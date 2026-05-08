@@ -86,6 +86,15 @@ pub struct ImageCaptchaResponse {
     pub image_base64: String,
 }
 
+// ==================== AuthTokens ====================
+
+/// 认证令牌（作为 Dioxus Context 使用，避免两个 Signal<String> 类型冲突）
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct AuthTokens {
+    pub access_token: String,
+    pub refresh_token: String,
+}
+
 // ==================== AuthStage ====================
 
 /// 认证阶段

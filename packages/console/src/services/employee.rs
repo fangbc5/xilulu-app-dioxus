@@ -103,8 +103,15 @@ pub struct EmployeeResponse {
     pub update_time: Option<String>,
 }
 
+/// 按月入职统计结果
+#[derive(Debug, Deserialize)]
+pub struct MonthlyCount {
+    pub month: String,
+    pub count: i64,
+}
+
 /// 员工列表查询
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct ListEmployeesQuery {
     #[serde(rename = "orgId")]
     pub org_id: Option<i64>,
@@ -163,6 +170,51 @@ impl ApiClient {
 
         let resp: Resp = self.get(&path).await?;
         Ok(resp.data.and_then(|d| d.total).unwrap_or(0) as u32)
+    }
+
+    /// 按月入职统计（服务端 SQL 聚合）
+    ///
+    /// 调用 GET /api/v1/team/employees/hire-stats?org_id=&start_month=&end_month=
+    /// 返回每月入职人数列表。
+    pub async fn hire_stats(
+        &self,
+        org_id: i64,
+        start_month: Option<&str>,
+        end_month: Option<&str>,
+    ) -> Result<Vec<MonthlyCount>, ApiError> {
+        let mut path = format!("/api/v1/team/employees/hire-stats?org_id={}", org_id);
+        if let Some(sm) = start_month {
+            path.push_str(&format!("&start_month={}", sm));
+        }
+        if let Some(em) = end_month {
+            path.push_str(&format!("&end_month={}", em));
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct Resp {
+            data: Option<Vec<MonthlyCount>>,
+        }
+
+        let resp: Resp = self.get(&path).await?;
+        Ok(resp.data.unwrap_or_default())
+    }
+
+    /// 统计本月入职员工数量（便捷方法，基于 hire_stats）
+    pub async fn count_recent_hires(&self, org_id: i64) -> Result<u32, ApiError> {
+        let now = js_sys::Date::new(&0.into());
+        let year = now.get_full_year();
+        let month = now.get_month() + 1; // 0-based
+        let current_month = format!("{}-{:02}", year, month);
+
+        let stats = self.hire_stats(org_id, Some(&current_month), Some(&current_month)).await?;
+
+        let count = stats
+            .iter()
+            .find(|s| s.month == current_month)
+            .map(|s| s.count as u32)
+            .unwrap_or(0);
+
+        Ok(count)
     }
 
     /// 获取单个员工详情

@@ -14,8 +14,7 @@ pub fn LoginPage() -> Element {
     let nav = use_navigator();
     let api_client = use_context::<ApiClient>();
     let mut stage = use_context::<Signal<AuthStage>>();
-    let mut access_token = use_context::<Signal<String>>();
-    let mut refresh_token = use_context::<Signal<String>>();
+    let mut tokens = use_context::<Signal<AuthTokens>>();
     let mut user_info: Signal<Option<UserInfo>> = use_context();
 
     let mut username = use_signal(String::new);
@@ -211,7 +210,11 @@ pub fn LoginPage() -> Element {
                                         Ok(resp) => {
                                             if let Some(tenants) = &resp.tenant_list {
                                                 if tenants.len() > 1 {
-                                                    refresh_token.set(resp.refresh_token);
+                                                    tokens
+                                                        .set(AuthTokens {
+                                                            refresh_token: resp.refresh_token.clone(),
+                                                            access_token: String::new(),
+                                                        });
                                                     user_info.set(Some(resp.user_info));
                                                     let new_stage = AuthStage::NeedTenant {
                                                         temp_token: resp.access_token,
@@ -224,17 +227,23 @@ pub fn LoginPage() -> Element {
                                             }
                                             api.set_token(&resp.access_token);
                                             api.set_refresh_token(&resp.refresh_token);
-                                            access_token.set(resp.access_token.clone());
-                                            refresh_token.set(resp.refresh_token.clone());
+                                            let new_tokens = AuthTokens {
+                                                access_token: resp.access_token.clone(),
+                                                refresh_token: resp.refresh_token.clone(),
+                                            };
+                                            tokens.set(new_tokens.clone());
                                             let ui = resp.user_info.clone();
                                             user_info.set(Some(resp.user_info));
                                             stage.set(AuthStage::Authenticated);
-                                            save_auth(&access_token(), &refresh_token(), &ui);
+                                            save_auth(
+                                                &new_tokens.access_token,
+                                                &new_tokens.refresh_token,
+                                                &ui,
+                                            );
                                             nav.push("/");
                                         }
                                         Err(e) => {
                                             error_msg.set(format!("登录失败：{e}"));
-                                            // 刷新验证码
                                             match api.auth_get_captcha().await {
                                                 Ok(r) => {
                                                     captcha_id.set(r.captcha_id);
@@ -271,8 +280,7 @@ pub fn SelectTenantPage() -> Element {
     let nav = use_navigator();
     let api_client = use_context::<ApiClient>();
     let mut stage = use_context::<Signal<AuthStage>>();
-    let mut access_token = use_context::<Signal<String>>();
-    let mut refresh_token = use_context::<Signal<String>>();
+    let mut tokens = use_context::<Signal<AuthTokens>>();
     let mut user_info: Signal<Option<UserInfo>> = use_context();
 
     let mut loading = use_signal(|| false);
@@ -342,14 +350,14 @@ pub fn SelectTenantPage() -> Element {
                                 button {
                                     disabled: loading(),
                                     style: "
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        display: flex; align-items: center; justify-content: space-between;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        width: 100%; padding: 10px 14px;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        background: var(--ds-bg-secondary);
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        border: 1px solid var(--ds-border-primary);
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        border-radius: 8px; cursor: pointer;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        transition: all 150ms ease;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        text-align: left;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        display: flex; align-items: center; justify-content: space-between;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        width: 100%; padding: 10px 14px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        background: var(--ds-bg-secondary);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        border: 1px solid var(--ds-border-primary);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        border-radius: 8px; cursor: pointer;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        transition: all 150ms ease;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        text-align: left;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ",
                                     onclick: {
                                         let api = api_client.clone();
                                         move |_| {
@@ -367,12 +375,19 @@ pub fn SelectTenantPage() -> Element {
                                                     Ok(resp) => {
                                                         api.set_token(&resp.access_token);
                                                         api.set_refresh_token(&resp.refresh_token);
-                                                        access_token.set(resp.access_token.clone());
-                                                        refresh_token.set(resp.refresh_token.clone());
+                                                        let new_tokens = AuthTokens {
+                                                            access_token: resp.access_token.clone(),
+                                                            refresh_token: resp.refresh_token.clone(),
+                                                        };
+                                                        tokens.set(new_tokens.clone());
                                                         let ui = resp.user_info.clone();
                                                         user_info.set(Some(resp.user_info));
                                                         stage.set(AuthStage::Authenticated);
-                                                        save_auth(&access_token(), &refresh_token(), &ui);
+                                                        save_auth(
+                                                            &new_tokens.access_token,
+                                                            &new_tokens.refresh_token,
+                                                            &ui,
+                                                        );
                                                         nav.push("/");
                                                     }
                                                     Err(e) => {
@@ -393,10 +408,10 @@ pub fn SelectTenantPage() -> Element {
                                     if is_owner {
                                         span {
                                             style: "
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            font-size: 11px; padding: 2px 8px;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            background: rgba(59, 130, 246, 0.1);
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            color: #3b82f6; border-radius: 4px;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            font-size: 11px; padding: 2px 8px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            background: rgba(59, 130, 246, 0.1);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            color: #3b82f6; border-radius: 4px;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ",
                                             "所有者"
                                         }
                                     }
